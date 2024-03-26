@@ -142,13 +142,7 @@ class FolderExplorer(tk.Tk):
     def get_folder_file_contents(self, path):
         items = []
         try:
-            if path != "":
-                next_dir = self.vol.visit_dir(path)
-                record_list = next_dir.get_active_records()
-            else:
-                record_list = self.dir_tree.get_active_records()
-            for record in record_list:
-                items.append(record.file_name['long_name'])
+            items = self.vol.get_items(path)
 
         except FileNotFoundError:
             pass
@@ -222,7 +216,7 @@ class FolderExplorer(tk.Tk):
             widget.destroy()
 
 if __name__ == "__main__":
-    volume_name = 'D:'
+    volume_name = 'E:'
     if FAT32.check_fat32(volume_name):
         vol = FAT32(volume_name)
     elif NTFS.is_ntfs(volume_name):

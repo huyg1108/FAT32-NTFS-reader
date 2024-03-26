@@ -23,7 +23,7 @@ class NTFSAttribute(Flag):
 	NOT_INDEXED = auto()
 	ENCRYPTED = auto()
 
-class MFT_entry:
+class MFT_record:
 	def __init__(self, data) -> None:
 		self.raw_data = data
 		self.standard_info = {}
@@ -56,7 +56,7 @@ class MFT_entry:
 			self.standard_info['flags'] |= NTFSAttribute.DIRECTORY
 			self.data['size'] = 0
 			self.data['resident'] = True
-		self.childs: list[MFT_entry] = []
+		self.childs: list[MFT_record] = []
 
 		del self.raw_data
 
@@ -79,8 +79,8 @@ class MFT_entry:
 				return child
 		return None
 
-	def get_active_records(self) -> 'list[MFT_entry]':
-		record_list: list[MFT_entry] = []
+	def get_active_records(self) -> 'list[MFT_record]':
+		record_list: list[MFT_record] = []
 		for record in self.childs:
 			if record.is_active():
 				record_list.append(record)
@@ -159,9 +159,9 @@ class MFT_entry:
 
 
 class DirTree:
-	def __init__(self, nodes: 'list[MFT_entry]') -> None:
+	def __init__(self, nodes: 'list[MFT_record]') -> None:
 		self.root = None
-		self.nodes_dict: dict[int, MFT_entry] = {}
+		self.nodes_dict: dict[int, MFT_record] = {}
 		for node in nodes:
 			self.nodes_dict[node.file_id] = node
 
@@ -181,10 +181,10 @@ class DirTree:
 	def find_record(self, name: str):
 		return self.current_dir.find_record(name)
 
-	def get_parent_record(self, record: MFT_entry):
+	def get_parent_record(self, record: MFT_record):
 		return self.nodes_dict[record.file_name['parent_id']]
 
-	def get_active_records(self) -> 'list[MFT_entry]':
+	def get_active_records(self) -> 'list[MFT_record]':
 		return self.current_dir.get_active_records()
 
 
@@ -229,16 +229,16 @@ class NTFS:
 			self.disk_file.seek(self.mft_offset * self.sectors_per_cluster * self.bytes_per_sector)
 			
 			self.mft_file = MFT_file(self.disk_file.read(self.record_size))
-			mft_entry: list[MFT_entry] = []
+			mft_record: list[MFT_record] = []
 			for _ in range(2, self.mft_file.num_sector, 2):
 				entry_data = self.disk_file.read(self.record_size)
 				if entry_data[:4] == b"FILE":
 					try:
-						mft_entry.append(MFT_entry(entry_data))
+						mft_record.append(MFT_record(entry_data))
 					except Exception as e:
 						pass
 
-			self.dir_tree = DirTree(mft_entry)
+			self.dir_tree = DirTree(mft_record)
 		except Exception as e:
 			exit()
 
@@ -268,7 +268,7 @@ class NTFS:
 		dirs = re.sub(r"[/\\]+", r"\\", path).strip("\\").split("\\")
 		return dirs
   
-	def visit_dir(self, path) -> MFT_entry:
+	def visit_dir(self, path) -> MFT_record:
 		if path == "":
 			raise Exception("Directory name is required!")
 		path = self.get_path(path)
@@ -293,13 +293,24 @@ class NTFS:
 				raise Exception("Not a directory")
 		return cur_dir
 
+	def get_all_record(self, path = ""):
+		if path != "":
+			next_dir = self.visit_dir(path)
+			record_list = next_dir.get_active_records()
+		else:
+			record_list = self.dir_tree.get_active_records()
+		return record_list
+
+	def get_items(self, path = ""):
+		items = []
+		record_list = self.get_all_record(path)
+		for record in record_list:
+			items.append(record.file_name['long_name'])
+		return items
+
 	def get_dir(self, path = ""):
 		try:
-			if path != "":
-				next_dir = self.visit_dir(path)
-				record_list = next_dir.get_active_records()
-			else:
-				record_list = self.dir_tree.get_active_records()
+			record_list = self.get_all_record(path)
 			ret = []
 			for record in record_list:
 				obj = {}
