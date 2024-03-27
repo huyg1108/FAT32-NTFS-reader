@@ -216,7 +216,7 @@ class FolderExplorer(tk.Tk):
             widget.destroy()
 
 if __name__ == "__main__":
-    volume_name = 'E:'
+    volume_name = 'H:'
     if FAT32.check_fat32(volume_name):
         vol = FAT32(volume_name)
     elif NTFS.is_ntfs(volume_name):

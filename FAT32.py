@@ -3,7 +3,7 @@ from datetime import datetime
 from itertools import chain
 import re
 import os
-
+# thông tin của một entry
 class Attribute(Flag):
     READ_ONLY = auto()
     HIDDEN = auto()
@@ -13,6 +13,7 @@ class Attribute(Flag):
     ARCHIVE = auto()
 
 class FAT:
+    
     def __init__(self, data) -> None:
         self.raw_data = data
         self.elements = []
@@ -92,7 +93,8 @@ class RDETentry:
             day = self.date_updated_raw & 0b0000000000011111
 
             self.date_updated = datetime(year, mon, day, h, m, s)
-
+            # https://people.cs.umass.edu/~liberato/courses/2017-spring-compsci365/lecture-notes/11-fats-and-directory-entries/
+            # why this like is written like this
             self.start_cluster = int.from_bytes(self.raw_data[0x14:0x16][::-1] + self.raw_data[0x1A:0x1C][::-1], byteorder='big') 
             self.size = int.from_bytes(self.raw_data[0x1C:0x20], byteorder='little')
 
@@ -157,13 +159,12 @@ class FAT32:
     main_components = [
         "Bytes Per Sector",
         "Sectors Per Cluster", 
-        "Reserved Sectors", 
+        "Sectors before FAT table", 
+        "Number of FAT table",
         "Sectors Per FAT",
-        "No. Copies of FAT",
-        "No. Sectors In Volume",
+        "Volume size",
         "Starting Cluster of RDET",
-        "Starting Sector of Data",
-        "FAT Name"
+        "FAT type"
     ]
     def __init__(self, name: str) -> None:
         self.name = name
@@ -185,12 +186,12 @@ class FAT32:
             self.boot_sector_raw = self.fd.read(0x200)
             self.boot_sector = {}
             self.__extract_boot_sector()
-            if self.boot_sector["FAT Name"] != b"FAT32   ":
+            if self.boot_sector["FAT type"] != b"FAT32   ":
                 raise Exception("Not FAT32")
-            self.boot_sector["FAT Name"] = self.boot_sector["FAT Name"].decode()
-            self.SB = self.boot_sector['Reserved Sectors']
+            self.boot_sector["FAT type"] = self.boot_sector["FAT type"].decode()
+            self.SB = self.boot_sector['Sectors before FAT table']
             self.SF = self.boot_sector["Sectors Per FAT"]
-            self.NF = self.boot_sector["No. Copies of FAT"]
+            self.NF = self.boot_sector["Number of FAT table"]
             self.SC = self.boot_sector["Sectors Per Cluster"]
             self.BS = self.boot_sector["Bytes Per Sector"]
             self.boot_sector_reserved_raw = self.fd.read(self.BS * (self.SB - 1))
@@ -229,30 +230,30 @@ class FAT32:
         # self.boot_sector['OEM_ID'] = self.boot_sector_raw[3:0xB]
         self.boot_sector['Bytes Per Sector'] = int.from_bytes(self.boot_sector_raw[0xB:0xD], byteorder='little')
         self.boot_sector['Sectors Per Cluster'] = int.from_bytes(self.boot_sector_raw[0xD:0xE], byteorder='little')
-        self.boot_sector['Reserved Sectors'] = int.from_bytes(self.boot_sector_raw[0xE:0x10], byteorder='little')
-        self.boot_sector['No. Copies of FAT'] = int.from_bytes(self.boot_sector_raw[0x10:0x11], byteorder='little')
+        self.boot_sector['Sectors before FAT table'] = int.from_bytes(self.boot_sector_raw[0xE:0x10], byteorder='little')
+        self.boot_sector['Number of FAT table'] = int.from_bytes(self.boot_sector_raw[0x10:0x11], byteorder='little')
         # self.boot_sector['Media Descriptor'] = self.boot_sector_raw[0x15:0x16]
         # self.boot_sector['Sectors Per Track'] = int.from_bytes(self.boot_sector_raw[0x18:0x1A], byteorder='little')
         # self.boot_sector['No. Heads'] = int.from_bytes(self.boot_sector_raw[0x1A:0x1C], byteorder='little')
-        self.boot_sector['No. Sectors In Volume'] = int.from_bytes(self.boot_sector_raw[0x20:0x24], byteorder='little')
+        self.boot_sector['Volume size'] = int.from_bytes(self.boot_sector_raw[0x20:0x24], byteorder='little')
         self.boot_sector['Sectors Per FAT'] = int.from_bytes(self.boot_sector_raw[0x24:0x28], byteorder='little')
-        self.boot_sector['Flags'] = int.from_bytes(self.boot_sector_raw[0x28:0x2A], byteorder='little')
-        self.boot_sector['FAT32 Version'] = self.boot_sector_raw[0x2A:0x2C]
+        # self.boot_sector['Flags'] = int.from_bytes(self.boot_sector_raw[0x28:0x2A], byteorder='little')
+        # self.boot_sector['FAT32 Version'] = self.boot_sector_raw[0x2A:0x2C]
         self.boot_sector['Starting Cluster of RDET'] = int.from_bytes(self.boot_sector_raw[0x2C:0x30], byteorder='little')
         # self.boot_sector['Sector Number of the FileSystem Information Sector'] = self.boot_sector_raw[0x30:0x32]
         # self.boot_sector['Sector Number of BackupBoot'] = self.boot_sector_raw[0x32:0x34]
-        self.boot_sector['FAT Name'] = self.boot_sector_raw[0x52:0x5A]
+        self.boot_sector['FAT type'] = self.boot_sector_raw[0x52:0x5A]
         # self.boot_sector['Executable Code'] = self.boot_sector_raw[0x5A:0x1FE]
         # self.boot_sector['Signature'] = self.boot_sector_raw[0x1FE:0x200]
-        self.boot_sector['Starting Sector of Data'] = self.boot_sector['Reserved Sectors'] + self.boot_sector['No. Copies of FAT'] * self.boot_sector['Sectors Per FAT']
+        # self.boot_sector['Starting Sector of Data'] = self.boot_sector['Sectors before FAT table'] + self.boot_sector['Number of FAT table'] * self.boot_sector['Sectors Per FAT']
 
     def __offset_from_cluster(self, index):
         return self.SB + self.SF * self.NF + (index - 2) * self.SC
     
-    def __parse_path(self, path):
+    def format_path(self, path):
         dirs = re.sub(r"[/\\]+", r"\\", path).strip("\\").split("\\")
         return dirs
-
+    # get current working directory
     def get_cwd(self):
         if len(self.cwd) == 1:
             return self.cwd[0] + "\\"
@@ -261,7 +262,7 @@ class FAT32:
     def visit_dir(self, dir) -> RDET:
         if dir == "":
             raise Exception("Directory name is required!")
-        dirs = self.__parse_path(dir)
+        dirs = self.format_path(dir)
 
         if dirs[0] == self.name:
             cdet = self.DET[self.boot_sector["Starting Cluster of RDET"]]
@@ -323,22 +324,24 @@ class FAT32:
             raise(e)
 
     def get_folder_file_information(self, path):
-        try:
-            cdet = self.RDET
-            # fill in this to find parent of cdet...
-            entry = cdet.find_entry(path)
-            obj = {}
-            obj["Flags"] = entry.attr.value
-            obj["Date Modified"] = entry.date_updated
-            obj["Size"] = entry.size
-            obj["Name"] = entry.long_name
-            if entry.start_cluster == 0:
-                obj["Sector"] = (entry.start_cluster + 2) * self.SC
-            else:
-                obj["Sector"] = entry.start_cluster * self.SC
-            return obj
-        except Exception as e:
-            raise (e)
+        # try:
+        #     cdet = self.RDET
+        #     # fill in this to find parent of cdet...
+        #     entry = cdet.find_entry(path)
+        #     obj = {}
+        #     obj["Flags"] = entry.attr.value
+        #     obj["Date Modified"] = entry.date_updated
+        #     obj["Size"] = entry.size
+        #     obj["Name"] = entry.long_name
+        #     if entry.start_cluster == 0:
+        #         obj["Sector"] = (entry.start_cluster + 2) * self.SC
+        #     else:
+        #         obj["Sector"] = entry.start_cluster * self.SC
+        #     return obj
+        # except Exception as e:
+        #     raise (e)
+        
+        
 
     def change_dir(self, path=""):
         if path == "":
@@ -347,7 +350,7 @@ class FAT32:
             cdet = self.visit_dir(path)
             self.RDET = cdet
 
-            dirs = self.__parse_path(path)
+            dirs = self.format_path(path)
             if dirs[0] == self.name:
                 self.cwd.clear()
                 self.cwd.append(self.name)
@@ -371,7 +374,7 @@ class FAT32:
 
     # Read content of .txt
     def get_text_content(self, path: str) -> str:
-        path = self.__parse_path(path)
+        path = self.format_path(path)
         if len(path) > 1:
             name = path[-1]
             path = "\\".join(path[:-1])
@@ -403,7 +406,7 @@ class FAT32:
         return data
 
     def get_file_content(self, path: str) -> bytes:
-        path = self.__parse_path(path)
+        path = self.format_path(path)
         if len(path) > 1:
             name = path[-1]
             path = "\\".join(path[:-1])
