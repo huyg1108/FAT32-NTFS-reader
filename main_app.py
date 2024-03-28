@@ -6,6 +6,25 @@ from NTFS import *
 from FAT32 import *
 from ui import app
 
+class DriveInfoWindow(QtWidgets.QWidget):
+    def __init__(self, drive_info: str):
+        super().__init__()
+        self.setWindowTitle("Drive Information")
+        layout = QtWidgets.QVBoxLayout()
+        self.info_label = QtWidgets.QLabel(drive_info)
+        layout.addWidget(self.info_label)
+        self.setLayout(layout)
+
+class TextFileContentWindow(QtWidgets.QWidget):
+    def __init__(self, content: str):
+        super().__init__()
+        self.setWindowTitle("Text File Content")
+        layout = QtWidgets.QVBoxLayout()
+        self.content_textedit = QtWidgets.QTextEdit()
+        self.content_textedit.setPlainText(content)
+        layout.addWidget(self.content_textedit)
+        self.setLayout(layout)
+
 class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
     def __init__(self, volume: Union[FAT32, NTFS]) -> None:
         super(FolderExplorer, self).__init__()
@@ -18,6 +37,7 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         # Interaction
         self.treeView.clicked.connect(self.show_folder_info)
         self.treeView.clicked.connect(self.show_path)
+        self.treeView.doubleClicked.connect(self.show_txt_file_content)
         self.disk_info.clicked.connect(self.show_drive_info)
 
         # Font for QTextEdit
@@ -65,8 +85,13 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
             else:
                 info_text += "Attribute: None\n"
             info_text += f"Date Created: {str(file['Date Created'])}\n"
+            info_text += f"Time Created: {str(file['Time Created'])}\n"
             info_text += f"Date Modified: {str(file['Date Modified'])}\n"
-            info_text += f"Total Size: {file['Sector']} sector"
+            info_text += f"Time Modified: {str(file['Time Modified'])}\n"
+            # if int(file['Bytes']) == 1:
+            #     info_text += f"Total Size: {file['Bytes']} byte"
+            # else:
+            #     info_text += f"Total Size: {file['Bytes']} bytes"
 
             self.folder_att.clear()
             self.folder_att.insertPlainText(info_text)
@@ -74,8 +99,12 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.critical(self, "Error", str(e))
 
     def show_drive_info(self):
-        # print in new window
-        print(self.vol)
+        try:
+            drive_info = str(self.vol)
+            self.drive_info_window = DriveInfoWindow(drive_info)
+            self.drive_info_window.show()
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Error", str(e))
 
     def show_path(self):
         try:
@@ -86,10 +115,23 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", str(e))
 
+    def show_txt_file_content(self):
+        try:
+            index = self.treeView.currentIndex()
+            file_path = self.model.filePath(index)
+
+            if os.path.basename(file_path)[-4:] == '.txt':
+                content = self.vol.get_text_content(file_path)
+                self.text_file_content_window = TextFileContentWindow(content)
+                self.text_file_content_window.show()
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Error", str(e))
+
+
 if __name__ == "__main__":
     application = QtWidgets.QApplication(sys.argv)
 
-    volume_name = 'E:'
+    volume_name = 'D:'
     if FAT32.check_fat32(volume_name):
         vol = FAT32(volume_name)
     elif NTFS.is_ntfs(volume_name):

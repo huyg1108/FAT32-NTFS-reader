@@ -30,6 +30,7 @@ class MFT_record:
         self.standard_info = {}
         self.file_name = {}
         self.data = {}
+        self.childs: list[MFT_record] = []
 
         self.file_id = int.from_bytes(self.raw_data[0x2C:0x30], byteorder = 'little')
         self.flag = self.raw_data[0x16]
@@ -57,7 +58,6 @@ class MFT_record:
             self.standard_info['flags'] |= NTFSAttribute.DIRECTORY
             self.data['size'] = 0
             self.data['resident'] = True
-        self.childs: list[MFT_record] = []
 
         del self.raw_data
 
@@ -286,28 +286,30 @@ class NTFS:
             elif d == ".":
                 continue
             record = cur_dir.find_record(d)
+
             if record is None:
                 raise Exception("Directory not found!")
+            
             if record.is_directory():
                 cur_dir = record
             else:
                 raise Exception("Not a directory")
         return cur_dir
 
-    def get_all_record(self, path = ""):
-        if path != "":
-            next_dir = self.visit_dir(path)
-            record_list = next_dir.get_active_records()
-        else:
-            record_list = self.dir_tree.get_active_records()
-        return record_list
+    # def get_all_record(self, path = ""):
+    #     if path != "":
+    #         next_dir = self.visit_dir(path)
+    #         record_list = next_dir.get_active_records()
+    #     else:
+    #         record_list = self.dir_tree.get_active_records()
+    #     return record_list
 
-    def get_items(self, path = ""):
-        items = []
-        record_list = self.get_all_record(path)
-        for record in record_list:
-            items.append(record.file_name['long_name'])
-        return items
+    # def get_items(self, path = ""):
+    #     items = []
+    #     record_list = self.get_all_record(path)
+    #     for record in record_list:
+    #         items.append(record.file_name['long_name'])
+    #     return items
 
     # def get_dir(self, path = ""):
     #     try:
@@ -321,6 +323,41 @@ class NTFS:
     #         return ret
     #     except Exception as e:
     #         raise (e)
+
+    def change_dir(self, full_path=""):
+        if full_path == "":
+            raise Exception("Path to directory is required!")
+
+        # if full_path == "~":
+        #     full_path = self.name
+
+        try:
+            next_dir = self.visit_dir(full_path)
+            self.dir_tree.current_dir = next_dir
+
+            dirs = self.get_path(full_path)
+            if dirs[0] == self.name:
+                self.cwd.clear()
+                self.cwd.append(self.name)
+                dirs.pop(0)
+
+            # for d in dirs:
+            #     if d == "..":
+            #         if len(self.cwd) > 1:
+            #             self.cwd.pop()
+            #     elif d != ".":
+            #         self.cwd.append(d)
+        except Exception as e:
+            pass
+
+    def cal_total_directory_bytes(self, record):
+        total_bytes = 0
+        for child in record.childs:
+            if child.is_directory():
+                total_bytes += self.cal_total_directory_bytes(child)
+            elif 'size' in child.data:
+                total_bytes += child.data['size']
+        return total_bytes
 
     def get_folder_file_information(self, path, key):
         try:
@@ -336,44 +373,28 @@ class NTFS:
 
             obj = {}
             obj["Flags"] = record.standard_info['flags'].value
-            obj["Date Created"] = record.standard_info['created_time']
-            obj["Date Modified"] = record.standard_info['last_modified_time']
-            obj["Size"] = record.data['size']
+            obj["Date Created"] = record.standard_info['created_time'].strftime("%d/%m/%Y")
+            obj["Time Created"] = record.standard_info['created_time'].strftime("%H:%M:%S")
+            obj["Date Modified"] = record.standard_info['last_modified_time'].strftime("%d/%m/%Y")
+            obj["Time Modified"] = record.standard_info['last_modified_time'].strftime("%H:%M:%S")
             obj["Name"] = record.file_name['long_name']
             obj["Attribute"] = record.standard_info["flags"]
+            if record.is_directory():
+                obj["Bytes"] = self.cal_total_directory_bytes(record)
+            elif 'size' in record.data:
+                obj["Bytes"] = record.data['size']
+            else:
+                obj["Bytes"] = 0
+
             if record.data['resident']:
                 obj["Sector"] = self.mft_offset * self.sectors_per_cluster + record.file_id
             else:
                 obj["Sector"] = record.data['cluster_offset'] * self.sectors_per_cluster
+
             return obj
         except Exception as e:
             raise (e)
 
-    def change_dir(self, full_path=""):
-        if full_path == "":
-            raise Exception("Path to directory is required!")
-
-        if full_path == "~":
-            full_path = self.name
-
-        try:
-            next_dir = self.visit_dir(full_path)
-            self.dir_tree.current_dir = next_dir
-
-            dirs = self.get_path(full_path)
-            if dirs[0] == self.name:
-                self.cwd.clear()
-                self.cwd.append(self.name)
-                dirs.pop(0)
-
-            for d in dirs:
-                if d == "..":
-                    if len(self.cwd) > 1:
-                        self.cwd.pop()
-                elif d != ".":
-                    self.cwd.append(d)
-        except Exception as e:
-            pass
 
     def get_cwd(self):
         if len(self.cwd) == 1:
@@ -401,9 +422,9 @@ class NTFS:
         if record.data['resident']:
             try:
                 data = record.data['content'].decode()
-            # not a text file
+            # Not a text file
             except UnicodeDecodeError as e:
-                raise Exception("Not a text file, please use appropriate software to open.")
+                raise (e)
             except Exception as e:
                 raise (e)
             return data
@@ -421,7 +442,7 @@ class NTFS:
                 try:
                     data += raw_data.decode()
                 except UnicodeDecodeError as e:
-                    raise Exception("Not a text file, please use appropriate software to open.")
+                    raise (e)
                 except Exception as e:
                     raise (e)
             return data
@@ -439,7 +460,7 @@ class NTFS:
     ]
 
     def __str__(self) -> str:
-        s = ""
+        s = "Volume name: " + self.name + "\n"
         for key in NTFS.main_components:
             s += f"{key}: {self.boot_sector[key]}\n"
         return s

@@ -45,6 +45,7 @@ class RDETentry:
         self.date_updated = 0
         self.ext = b""
         self.long_name = ""
+
         if self.flag == b'\x0f':
             self.is_subentry = True
 
@@ -156,31 +157,13 @@ class RDET:
 
 
 class FAT32:
-    main_components = [
-        "Bytes Per Sector",
-        "Sectors Per Cluster", 
-        "Sectors before FAT table", 
-        "Number of FAT table",
-        "Sectors Per FAT",
-        "Volume size",
-        "Starting Cluster of RDET",
-        "FAT type"
-    ]
     def __init__(self, name: str) -> None:
         self.name = name
         self.cwd = [self.name]
         try:
             self.fd = open(r'\\.\%s' % self.name, 'rb')
-        except FileNotFoundError:
-            print(f"[ERROR] No volume named {name}")
+        except (FileNotFoundError, PermissionError, Exception) as e:
             exit()
-        except PermissionError:
-            print("[ERROR] Permission denied, try again as admin/root")
-            exit()
-        except Exception as e:
-            print(e)
-            print("[ERROR] Unknown error occurred")
-            exit() 
         
         try:
             self.boot_sector_raw = self.fd.read(0x200)
@@ -208,7 +191,6 @@ class FAT32:
             self.RDET = self.DET[start]
 
         except Exception as e:
-            print(f"[ERROR] {e}")
             exit()
     
     @staticmethod
@@ -222,30 +204,17 @@ class FAT32:
                     return True
                 return False
         except Exception as e:
-            print(f"[ERROR] {e}")
             exit()
 
     def __extract_boot_sector(self):
-        # self.boot_sector['Jump_Code'] = self.boot_sector_raw[:3]
-        # self.boot_sector['OEM_ID'] = self.boot_sector_raw[3:0xB]
         self.boot_sector['Bytes Per Sector'] = int.from_bytes(self.boot_sector_raw[0xB:0xD], byteorder='little')
         self.boot_sector['Sectors Per Cluster'] = int.from_bytes(self.boot_sector_raw[0xD:0xE], byteorder='little')
         self.boot_sector['Sectors before FAT table'] = int.from_bytes(self.boot_sector_raw[0xE:0x10], byteorder='little')
         self.boot_sector['Number of FAT table'] = int.from_bytes(self.boot_sector_raw[0x10:0x11], byteorder='little')
-        # self.boot_sector['Media Descriptor'] = self.boot_sector_raw[0x15:0x16]
-        # self.boot_sector['Sectors Per Track'] = int.from_bytes(self.boot_sector_raw[0x18:0x1A], byteorder='little')
-        # self.boot_sector['No. Heads'] = int.from_bytes(self.boot_sector_raw[0x1A:0x1C], byteorder='little')
         self.boot_sector['Volume size'] = int.from_bytes(self.boot_sector_raw[0x20:0x24], byteorder='little')
         self.boot_sector['Sectors Per FAT'] = int.from_bytes(self.boot_sector_raw[0x24:0x28], byteorder='little')
-        # self.boot_sector['Flags'] = int.from_bytes(self.boot_sector_raw[0x28:0x2A], byteorder='little')
-        # self.boot_sector['FAT32 Version'] = self.boot_sector_raw[0x2A:0x2C]
         self.boot_sector['Starting Cluster of RDET'] = int.from_bytes(self.boot_sector_raw[0x2C:0x30], byteorder='little')
-        # self.boot_sector['Sector Number of the FileSystem Information Sector'] = self.boot_sector_raw[0x30:0x32]
-        # self.boot_sector['Sector Number of BackupBoot'] = self.boot_sector_raw[0x32:0x34]
         self.boot_sector['FAT type'] = self.boot_sector_raw[0x52:0x5A]
-        # self.boot_sector['Executable Code'] = self.boot_sector_raw[0x5A:0x1FE]
-        # self.boot_sector['Signature'] = self.boot_sector_raw[0x1FE:0x200]
-        # self.boot_sector['Starting Sector of Data'] = self.boot_sector['Sectors before FAT table'] + self.boot_sector['Number of FAT table'] * self.boot_sector['Sectors Per FAT']
 
     def __offset_from_cluster(self, index):
         return self.SB + self.SF * self.NF + (index - 2) * self.SC
@@ -253,6 +222,7 @@ class FAT32:
     def format_path(self, path):
         dirs = re.sub(r"[/\\]+", r"\\", path).strip("\\").split("\\")
         return dirs
+
     # get current working directory
     def get_cwd(self):
         if len(self.cwd) == 1:
@@ -287,21 +257,21 @@ class FAT32:
                 raise Exception("Not a directory")
         return cdet
 
-    def get_all_entry(self, path = ""):
-        if path != "":
-            cdet = self.visit_dir(path)
-            entry_list = cdet.get_active_entries()
-        else:
-            entry_list = self.RDET.get_active_entries()
-        return entry_list
+    # def get_all_entry(self, path = ""):
+    #     if path != "":
+    #         cdet = self.visit_dir(path)
+    #         entry_list = cdet.get_active_entries()
+    #     else:
+    #         entry_list = self.RDET.get_active_entries()
+    #     return entry_list
 
-    def get_items(self, path = ""):
-        items = []
-        entry_list = self.get_all_entry(path)
-        for entry in entry_list:
-            if (entry.long_name != "." and entry.long_name != ".."):
-                items.append(entry.long_name)
-        return items
+    # def get_items(self, path = ""):
+    #     items = []
+    #     entry_list = self.get_all_entry(path)
+    #     for entry in entry_list:
+    #         if (entry.long_name != "." and entry.long_name != ".."):
+    #             items.append(entry.long_name)
+    #     return items
 
     # def get_dir(self, path = ""):
     #     try:
@@ -341,16 +311,27 @@ class FAT32:
                 self.cwd.clear()
                 self.cwd.append(self.name)
                 dirs.pop(0)
-            for d in dirs:
-                if d == "..":
-                    self.cwd.pop()
-                elif d != ".":
-                    self.cwd.append(d)
+            # for d in dirs:
+            #     if d == "..":
+            #         self.cwd.pop()
+            #     elif d != ".":
+            #         self.cwd.append(d)
         except Exception as e:
             raise(e)
 
+    # don't delete it!
+    # def cal_total_directory_bytes(self, record):
+    #     total_bytes = 0
+    #     for child in record.childs:
+    #         if child.is_directory():
+    #             total_bytes += self.cal_total_directory_bytes(child)
+    #         elif 'size' in child.data:
+    #             total_bytes += child.data['size']
+    #     return total_bytes
+
     def get_folder_file_information(self, path, key):
         try:
+            obj = {}
             if key == 0:
                 if not os.path.isabs(path):
                     path = os.path.join(self.get_cwd(), path)
@@ -363,10 +344,11 @@ class FAT32:
                 file_name = os.path.basename(path)
                 record = cdet.find_entry(file_name)
 
-            obj = {}
             obj["Flags"] = record.attr.value
-            obj["Date Created"] = record.date_created
-            obj["Date Modified"] = record.date_updated
+            obj["Date Created"] = record.date_created.strftime("%d/%m/%Y")
+            obj["Time Created"] = record.date_created.strftime("%H:%M:%S")
+            obj["Date Modified"] = record.date_updated.strftime("%d/%m/%Y")
+            obj["Time Modified"] = record.date_updated.strftime("%H:%M:%S")
             obj["Size"] = record.size
             obj["Name"] = record.long_name
             obj["Attribute"] = record.attr
@@ -375,6 +357,7 @@ class FAT32:
                 obj["Sector"] = (record.start_cluster + 2) * self.SC
             else:
                 obj["Sector"] = record.start_cluster * self.SC
+
             return obj
         except Exception as e:
             raise (e)
@@ -403,27 +386,41 @@ class FAT32:
             raise Exception("File doesn't exist")
         if entry.is_directory():
             raise Exception("Is a directory")
-        index_list = self.FAT[0].get_cluster_chain(entry.start_cluster)
-        data = ""
-        size_left = entry.size
-        for i in index_list:
-            if size_left <= 0:
-                break
-            off = self.__offset_from_cluster(i)
-            self.fd.seek(off * self.BS)
-            raw_data = self.fd.read(min(self.SC * self.BS, size_left))
-            size_left -= self.SC * self.BS
-            try:
-                data += raw_data.decode()
-            except UnicodeDecodeError as e:
-                raise Exception("Not a text file, please use appropriate software to open.")
-            except Exception as e:
-                raise(e)
-        return data
+
+        try:
+            index_list = self.FAT[0].get_cluster_chain(entry.start_cluster)
+            data = ""
+            size_left = entry.size
+            for i in index_list:
+                if size_left <= 0:
+                    break
+                off = self.__offset_from_cluster(i)
+                self.fd.seek(off * self.BS)
+                raw_data = self.fd.read(min(self.SC * self.BS, size_left))
+                size_left -= self.SC * self.BS
+                try:
+                    data += raw_data.decode()
+                except UnicodeDecodeError as e:
+                    raise Exception("Not a text file, please use appropriate software to open.")
+                except Exception as e:
+                    raise(e)
+            return data
+        except:
+            return ''
+
+    main_components = [
+        "Bytes Per Sector",
+        "Sectors Per Cluster", 
+        "Sectors before FAT table", 
+        "Number of FAT table",
+        "Sectors Per FAT",
+        "Volume size",
+        "Starting Cluster of RDET",
+        "FAT type"
+    ]
 
     def __str__(self) -> str:
-        s = "Volume name: " + self.name
-        s += "\nVolume information:\n"
+        s = "Volume name: " + self.name + "\n"
         for key in FAT32.main_components:
             s += f"{key}: {self.boot_sector[key]}\n"
         return s

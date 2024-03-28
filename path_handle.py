@@ -10,4 +10,4 @@ def check_path_type(path):
 
 def get_parent_path(folder_path):
     parent_path = os.path.dirname(folder_path)
-    return parent_path
+    return parent_path    
