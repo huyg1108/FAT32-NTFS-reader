@@ -3,6 +3,8 @@ from datetime import datetime
 from itertools import chain
 import re
 import os
+from path_handle import *
+
 # thông tin của một entry
 class Attribute(Flag):
     READ_ONLY = auto()
@@ -13,7 +15,6 @@ class Attribute(Flag):
     ARCHIVE = auto()
 
 class FAT:
-    
     def __init__(self, data) -> None:
         self.raw_data = data
         self.elements = []
@@ -72,12 +73,11 @@ class RDETentry:
             h = (self.time_created_raw & 0b111110000000000000000000) >> 19
             m = (self.time_created_raw & 0b000001111110000000000000) >> 13
             s = (self.time_created_raw & 0b000000000001111110000000) >> 7
-            ms =(self.time_created_raw & 0b000000000000000001111111)
             year = 1980 + ((self.date_created_raw & 0b1111111000000000) >> 9)
             mon = (self.date_created_raw & 0b0000000111100000) >> 5
             day = self.date_created_raw & 0b0000000000011111
 
-            self.date_created = datetime(year, mon, day, h, m, s, ms)
+            self.date_created = datetime(year, mon, day, h, m, s)
 
             year = 1980 + ((self.last_accessed_raw & 0b1111111000000000) >> 9)
             mon = (self.last_accessed_raw & 0b0000000111100000) >> 5
@@ -295,7 +295,6 @@ class FAT32:
             entry_list = self.RDET.get_active_entries()
         return entry_list
 
-
     def get_items(self, path = ""):
         items = []
         entry_list = self.get_all_entry(path)
@@ -304,50 +303,37 @@ class FAT32:
                 items.append(entry.long_name)
         return items
 
-    def get_dir(self, path = ""):
-        try:
-            entry_list = self.get_all_entry(path)
-            ret = []
-            for entry in entry_list:
-                obj = {}
-                obj["Flags"] = entry.attr.value
-                obj["Date Modified"] = entry.date_updated
-                obj["Size"] = entry.size
-                obj["Name"] = entry.long_name
-                if entry.start_cluster == 0:
-                    obj["Sector"] = (entry.start_cluster + 2) * self.SC
-                else:
-                    obj["Sector"] = entry.start_cluster * self.SC
-                ret.append(obj)
-            return ret
-        except Exception as e:
-            raise(e)
-
-    def get_folder_file_information(self, path):
-        # try:
-        #     cdet = self.RDET
-        #     # fill in this to find parent of cdet...
-        #     entry = cdet.find_entry(path)
-        #     obj = {}
-        #     obj["Flags"] = entry.attr.value
-        #     obj["Date Modified"] = entry.date_updated
-        #     obj["Size"] = entry.size
-        #     obj["Name"] = entry.long_name
-        #     if entry.start_cluster == 0:
-        #         obj["Sector"] = (entry.start_cluster + 2) * self.SC
-        #     else:
-        #         obj["Sector"] = entry.start_cluster * self.SC
-        #     return obj
-        # except Exception as e:
-        #     raise (e)
-        
-        
+    # def get_dir(self, path = ""):
+    #     try:
+    #         entry_list = self.get_all_entry(path)
+    #         ret = []
+    #         for entry in entry_list:
+    #             obj = {}
+    #             obj["Flags"] = entry.attr.value
+    #             obj["Date Modified"] = entry.date_updated
+    #             obj["Size"] = entry.size
+    #             obj["Name"] = entry.long_name
+    #             if entry.start_cluster == 0:
+    #                 obj["Sector"] = (entry.start_cluster + 2) * self.SC
+    #             else:
+    #                 obj["Sector"] = entry.start_cluster * self.SC
+    #             ret.append(obj)
+    #         return ret
+    #     except Exception as e:
+    #         raise(e)
 
     def change_dir(self, path=""):
         if path == "":
             raise Exception("Path to directory is required!")
         try:
-            cdet = self.visit_dir(path)
+            if not os.path.isabs(path):
+                path = os.path.join(self.get_cwd(), path)
+                
+            if os.path.isdir(path):
+                cdet = self.visit_dir(path)
+            else:
+                cdet = self.visit_dir(os.path.dirname(path))
+                
             self.RDET = cdet
 
             dirs = self.format_path(path)
@@ -362,6 +348,36 @@ class FAT32:
                     self.cwd.append(d)
         except Exception as e:
             raise(e)
+
+    def get_folder_file_information(self, path, key):
+        try:
+            if key == 0:
+                if not os.path.isabs(path):
+                    path = os.path.join(self.get_cwd(), path)
+                cdet = self.visit_dir(os.path.dirname(path))
+                file_name = os.path.basename(path)
+                record = cdet.find_entry(file_name)
+            else:
+                # is file
+                cdet = self.visit_dir(get_parent_path(path))
+                file_name = os.path.basename(path)
+                record = cdet.find_entry(file_name)
+
+            obj = {}
+            obj["Flags"] = record.attr.value
+            obj["Date Created"] = record.date_created
+            obj["Date Modified"] = record.date_updated
+            obj["Size"] = record.size
+            obj["Name"] = record.long_name
+            obj["Attribute"] = record.attr
+
+            if record.start_cluster == 0:
+                obj["Sector"] = (record.start_cluster + 2) * self.SC
+            else:
+                obj["Sector"] = record.start_cluster * self.SC
+            return obj
+        except Exception as e:
+            raise (e)
 
     def get_all_cluster_data(self, cluster_index):
         index_list = self.FAT[0].get_cluster_chain(cluster_index)
@@ -405,23 +421,6 @@ class FAT32:
                 raise(e)
         return data
 
-    def get_file_content(self, path: str) -> bytes:
-        path = self.format_path(path)
-        if len(path) > 1:
-            name = path[-1]
-            path = "\\".join(path[:-1])
-            cdet = self.visit_dir(path)
-            entry = cdet.find_entry(name)
-        else: 
-            entry = self.RDET.find_entry(path[0])
-
-        if entry is None:
-            raise Exception("File doesn't exist")
-        if entry.is_directory():
-            raise Exception("Is a directory")
-        data = self.get_all_cluster_data(entry.start_cluster)[:entry.size]
-        return data
-
     def __str__(self) -> str:
         s = "Volume name: " + self.name
         s += "\nVolume information:\n"
@@ -431,5 +430,4 @@ class FAT32:
 
     def __del__(self):
         if getattr(self, "fd", None):
-            print("Closing Volume...")
             self.fd.close()
