@@ -12,12 +12,15 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         self.setupUi(self)
         self.vol = volume
         self.populate()
-        self.treeView.clicked.connect(self.show_folder_info)
-        
         root_index = self.model.index(volume_name) 
         self.treeView.setRootIndex(root_index)
 
-        # font for QTextEdit
+        # Interaction
+        self.treeView.clicked.connect(self.show_folder_info)
+        self.treeView.clicked.connect(self.show_path)
+        self.disk_info.clicked.connect(self.show_drive_info)
+
+        # Font for QTextEdit
         font = QtGui.QFont("Arial", 12)
         self.folder_att.setFont(font)
 
@@ -70,8 +73,18 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", str(e))
 
-    def get_drive_info(self):
-        print('get drive info')
+    def show_drive_info(self):
+        # print in new window
+        print(self.vol)
+
+    def show_path(self):
+        try:
+            index = self.treeView.currentIndex()
+            folder_path = self.model.filePath(index)
+            self.lineEdit.clear()
+            self.lineEdit.setText(folder_path)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Error", str(e))
 
 if __name__ == "__main__":
     application = QtWidgets.QApplication(sys.argv)
