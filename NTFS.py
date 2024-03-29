@@ -127,36 +127,18 @@ class MFT_record:
     # 0x80
     def get_data(self, start):
         self.data['resident'] = not bool(self.raw_data[start + 0x8])
-        if self.data['resident']: 
-            offset_offset = start + 0x14
-            offset = int.from_bytes(self.raw_data[offset_offset: offset_offset + 2], byteorder='little')
-
-            size_offset = start + 0x10
-            size = int.from_bytes(self.raw_data[size_offset: size_offset + 4], byteorder='little')
-
-            content_offset = start + offset
-            content = self.raw_data[content_offset: content_offset + size]
-
-            self.data['size'] = size
-            self.data['content'] = content
+        if self.data['resident']:
+            offset = int.from_bytes(self.raw_data[start + 0x14:start + 0x16], byteorder='little')
+            self.data['size'] = int.from_bytes(self.raw_data[start + 0x10:start + 0x14], byteorder='little')
+            self.data['content'] = self.raw_data[start + offset:start + offset + self.data['size']]
         else:
-            cluster_chain_offset = start + 0x40
-            cluster_chain = self.raw_data[cluster_chain_offset]
+            cluster_chain = self.raw_data[start + 0x40]
             offset = (cluster_chain & 0xF0) >> 4
             size = cluster_chain & 0x0F
 
-            size_offset = start + 0x30
-            size = int.from_bytes(self.raw_data[size_offset: size_offset + 8], byteorder='little')
-
-            cluster_size_offset = start + 0x41
-            cluster_size = int.from_bytes(self.raw_data[cluster_size_offset: cluster_size_offset + size], byteorder='little')
-
-            cluster_offset_offset = start + 0x41 + size
-            cluster_offset = int.from_bytes(self.raw_data[cluster_offset_offset: cluster_offset_offset + offset], byteorder='little')
-
-            self.data['size'] = size
-            self.data['cluster_size'] = cluster_size
-            self.data['cluster_offset'] = cluster_offset
+            self.data['size'] = int.from_bytes(self.raw_data[start + 0x30: start + 0x38], byteorder='little')
+            self.data['cluster_size'] = int.from_bytes(self.raw_data[start + 0x41: start + 0x41 + size], byteorder='little')
+            self.data['cluster_offset'] =  int.from_bytes(self.raw_data[start + 0x41 + size: start + 0x41 + size + offset], byteorder='little')
 
 
 class DirTree:
@@ -296,33 +278,33 @@ class NTFS:
                 raise Exception("Not a directory")
         return cur_dir
 
-    # def get_all_record(self, path = ""):
-    #     if path != "":
-    #         next_dir = self.visit_dir(path)
-    #         record_list = next_dir.get_active_records()
-    #     else:
-    #         record_list = self.dir_tree.get_active_records()
-    #     return record_list
+    def get_all_record(self, path = ""):
+        if path != "":
+            next_dir = self.visit_dir(path)
+            record_list = next_dir.get_active_records()
+        else:
+            record_list = self.dir_tree.get_active_records()
+        return record_list
 
-    # def get_items(self, path = ""):
-    #     items = []
-    #     record_list = self.get_all_record(path)
-    #     for record in record_list:
-    #         items.append(record.file_name['long_name'])
-    #     return items
+    def get_items(self, path = ""):
+        items = []
+        record_list = self.get_all_record(path)
+        for record in record_list:
+            items.append(record.file_name['long_name'])
+        return items
 
-    # def get_dir(self, path = ""):
-    #     try:
-    #         record_list = self.get_all_record(path)
-    #         ret = []
-    #         for record in record_list:
-    #             obj = {}
-    #             obj["Flags"] = record.standard_info['flags'].value
-    #             obj["Name"] = record.file_name['long_name']
-    #             ret.append(obj)
-    #         return ret
-    #     except Exception as e:
-    #         raise (e)
+    def get_dir(self, path = ""):
+        try:
+            record_list = self.get_all_record(path)
+            ret = []
+            for record in record_list:
+                obj = {}
+                obj["Flags"] = record.standard_info['flags'].value
+                obj["Name"] = record.file_name['long_name']
+                ret.append(obj)
+            return ret
+        except Exception as e:
+            raise (e)
 
     def change_dir(self, full_path=""):
         if full_path == "":

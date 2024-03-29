@@ -59,9 +59,7 @@ class TextFileContentWindow(QtWidgets.QWidget):
         self.setWindowTitle(title)
         layout = QtWidgets.QVBoxLayout()
         self.content_textedit = QtWidgets.QTextEdit()
-        content_without_null = content.replace('\x00', '')
-
-        self.content_textedit.setPlainText(content_without_null)
+        self.content_textedit.setPlainText(content)
         layout.addWidget(self.content_textedit)
         self.setLayout(layout)
         self.resize(600, 400)
@@ -169,6 +167,7 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
 
             if os.path.basename(file_path)[-4:] == '.txt':
                 content = self.vol.get_text_content(file_path)
+                print(content)
                 self.text_file_content_window = TextFileContentWindow(content, os.path.basename(file_path))
                 self.text_file_content_window.show()
         except Exception as e:
