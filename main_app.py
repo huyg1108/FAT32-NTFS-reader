@@ -59,7 +59,9 @@ class TextFileContentWindow(QtWidgets.QWidget):
         self.setWindowTitle(title)
         layout = QtWidgets.QVBoxLayout()
         self.content_textedit = QtWidgets.QTextEdit()
-        self.content_textedit.setPlainText(content)
+        content_without_null = content.replace('\x00', '')
+
+        self.content_textedit.setPlainText(content_without_null)
         layout.addWidget(self.content_textedit)
         self.setLayout(layout)
         self.resize(600, 400)
