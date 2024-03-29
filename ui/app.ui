@@ -6,33 +6,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>873</width>
-    <height>618</height>
+    <width>868</width>
+    <height>612</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLabel" name="path_text">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>0</y>
-      <width>21</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Path</string>
-    </property>
-   </widget>
    <widget class="QTreeView" name="treeView">
     <property name="geometry">
      <rect>
       <x>10</x>
       <y>30</y>
-      <width>611</width>
+      <width>591</width>
       <height>541</height>
      </rect>
     </property>
@@ -40,9 +27,9 @@
    <widget class="QTextEdit" name="folder_att">
     <property name="geometry">
      <rect>
-      <x>630</x>
+      <x>610</x>
       <y>30</y>
-      <width>231</width>
+      <width>251</width>
       <height>541</height>
      </rect>
     </property>
@@ -50,9 +37,9 @@
    <widget class="QLineEdit" name="lineEdit">
     <property name="geometry">
      <rect>
-      <x>40</x>
+      <x>80</x>
       <y>0</y>
-      <width>651</width>
+      <width>641</width>
       <height>21</height>
      </rect>
     </property>
@@ -60,14 +47,27 @@
    <widget class="QPushButton" name="disk_info">
     <property name="geometry">
      <rect>
-      <x>700</x>
+      <x>730</x>
       <y>0</y>
-      <width>161</width>
+      <width>131</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
      <string>Get Disk Information</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="backButton">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>0</y>
+      <width>61</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Back</string>
     </property>
    </widget>
   </widget>
@@ -76,7 +76,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>873</width>
+     <width>868</width>
      <height>21</height>
     </rect>
    </property>

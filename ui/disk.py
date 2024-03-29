@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'app.ui'
+## Form generated from reading UI file 'disk_selection.ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.15.2
 ##
@@ -17,28 +17,19 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(868, 612)
+        MainWindow.resize(367, 253)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        self.treeView = QTreeView(self.centralwidget)
-        self.treeView.setObjectName(u"treeView")
-        self.treeView.setGeometry(QRect(10, 30, 591, 541))
-        self.folder_att = QTextEdit(self.centralwidget)
-        self.folder_att.setObjectName(u"folder_att")
-        self.folder_att.setGeometry(QRect(610, 30, 251, 541))
-        self.lineEdit = QLineEdit(self.centralwidget)
-        self.lineEdit.setObjectName(u"lineEdit")
-        self.lineEdit.setGeometry(QRect(80, 0, 641, 21))
-        self.disk_info = QPushButton(self.centralwidget)
-        self.disk_info.setObjectName(u"disk_info")
-        self.disk_info.setGeometry(QRect(730, 0, 131, 21))
-        self.backButton = QPushButton(self.centralwidget)
-        self.backButton.setObjectName(u"backButton")
-        self.backButton.setGeometry(QRect(10, 0, 61, 21))
+        self.label = QLabel(self.centralwidget)
+        self.label.setObjectName(u"label")
+        self.label.setGeometry(QRect(90, 40, 195, 23))
+        self.comboBox = QComboBox(self.centralwidget)
+        self.comboBox.setObjectName(u"comboBox")
+        self.comboBox.setGeometry(QRect(110, 80, 161, 21))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 868, 21))
+        self.menubar.setGeometry(QRect(0, 0, 367, 21))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -51,7 +42,6 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.disk_info.setText(QCoreApplication.translate("MainWindow", u"Get Disk Information", None))
-        self.backButton.setText(QCoreApplication.translate("MainWindow", u"Back", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-size:14pt; font-weight:600;\">Choose your volume</span></p></body></html>", None))
     # retranslateUi
 

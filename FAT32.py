@@ -311,23 +311,8 @@ class FAT32:
                 self.cwd.clear()
                 self.cwd.append(self.name)
                 dirs.pop(0)
-            # for d in dirs:
-            #     if d == "..":
-            #         self.cwd.pop()
-            #     elif d != ".":
-            #         self.cwd.append(d)
         except Exception as e:
             raise(e)
-
-    # don't delete it!
-    # def cal_total_directory_bytes(self, record):
-    #     total_bytes = 0
-    #     for child in record.childs:
-    #         if child.is_directory():
-    #             total_bytes += self.cal_total_directory_bytes(child)
-    #         elif 'size' in child.data:
-    #             total_bytes += child.data['size']
-    #     return total_bytes
 
     def get_folder_file_information(self, path, key):
         try:
@@ -349,7 +334,7 @@ class FAT32:
             obj["Time Created"] = record.date_created.strftime("%H:%M:%S")
             obj["Date Modified"] = record.date_updated.strftime("%d/%m/%Y")
             obj["Time Modified"] = record.date_updated.strftime("%H:%M:%S")
-            obj["Size"] = record.size
+            obj["Bytes"] = record.size
             obj["Name"] = record.long_name
             obj["Attribute"] = record.attr
 

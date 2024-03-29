@@ -327,10 +327,8 @@ class NTFS:
     def change_dir(self, full_path=""):
         if full_path == "":
             raise Exception("Path to directory is required!")
-
         # if full_path == "~":
         #     full_path = self.name
-
         try:
             next_dir = self.visit_dir(full_path)
             self.dir_tree.current_dir = next_dir
@@ -340,24 +338,8 @@ class NTFS:
                 self.cwd.clear()
                 self.cwd.append(self.name)
                 dirs.pop(0)
-
-            # for d in dirs:
-            #     if d == "..":
-            #         if len(self.cwd) > 1:
-            #             self.cwd.pop()
-            #     elif d != ".":
-            #         self.cwd.append(d)
         except Exception as e:
             pass
-
-    def cal_total_directory_bytes(self, record):
-        total_bytes = 0
-        for child in record.childs:
-            if child.is_directory():
-                total_bytes += self.cal_total_directory_bytes(child)
-            elif 'size' in child.data:
-                total_bytes += child.data['size']
-        return total_bytes
 
     def get_folder_file_information(self, path, key):
         try:
@@ -379,12 +361,7 @@ class NTFS:
             obj["Time Modified"] = record.standard_info['last_modified_time'].strftime("%H:%M:%S")
             obj["Name"] = record.file_name['long_name']
             obj["Attribute"] = record.standard_info["flags"]
-            if record.is_directory():
-                obj["Bytes"] = self.cal_total_directory_bytes(record)
-            elif 'size' in record.data:
-                obj["Bytes"] = record.data['size']
-            else:
-                obj["Bytes"] = 0
+            obj["Bytes"] = record.data['size']
 
             if record.data['resident']:
                 obj["Sector"] = self.mft_offset * self.sectors_per_cluster + record.file_id

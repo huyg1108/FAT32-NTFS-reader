@@ -1,10 +1,42 @@
-from PySide2 import QtWidgets, QtCore, QtGui
 import os
 import sys
+from PySide2 import QtWidgets, QtCore, QtGui
+from psutil import disk_partitions
 from typing import Union
 from NTFS import *
 from FAT32 import *
-from ui import app
+from ui import app, disk
+
+class MainWindow(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.ui = disk.Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.populate_disk_list()
+        self.ui.comboBox.activated[str].connect(self.drive_selected)
+        self.folder_explorer = None
+        self.setStyleSheet("QMainWindow { background-color: #CCCCCC; }")
+
+    def populate_disk_list(self):
+        disks = [partition.device for partition in disk_partitions(all=False)]
+        self.ui.comboBox.clear()
+        self.ui.comboBox.addItems(disks)
+
+    def drive_selected(self, volume_name):
+        volume_name = volume_name.rstrip("\\")
+        volume = None
+        if FAT32.check_fat32(volume_name):
+            volume = FAT32(volume_name)
+        elif NTFS.is_ntfs(volume_name):
+            volume = NTFS(volume_name)
+
+        if volume:
+            # Kiểm tra nếu cửa sổ FolderExplorer đã được tạo trước đó
+            if self.folder_explorer and self.folder_explorer.isVisible():
+                self.folder_explorer.close()  # Đóng cửa sổ cũ nếu còn mở
+            self.folder_explorer = FolderExplorer(volume, volume_name)
+            self.folder_explorer.show()
+
 
 class DriveInfoWindow(QtWidgets.QWidget):
     def __init__(self, drive_info: str):
@@ -14,6 +46,7 @@ class DriveInfoWindow(QtWidgets.QWidget):
         self.info_label = QtWidgets.QLabel(drive_info)
         layout.addWidget(self.info_label)
         self.setLayout(layout)
+
 
 class TextFileContentWindow(QtWidgets.QWidget):
     def __init__(self, content: str):
@@ -25,8 +58,9 @@ class TextFileContentWindow(QtWidgets.QWidget):
         layout.addWidget(self.content_textedit)
         self.setLayout(layout)
 
+
 class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
-    def __init__(self, volume: Union[FAT32, NTFS]) -> None:
+    def __init__(self, volume: Union[FAT32, NTFS], volume_name) -> None:
         super(FolderExplorer, self).__init__()
         self.setupUi(self)
         self.vol = volume
@@ -88,10 +122,10 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
             info_text += f"Time Created: {str(file['Time Created'])}\n"
             info_text += f"Date Modified: {str(file['Date Modified'])}\n"
             info_text += f"Time Modified: {str(file['Time Modified'])}\n"
-            # if int(file['Bytes']) == 1:
-            #     info_text += f"Total Size: {file['Bytes']} byte"
-            # else:
-            #     info_text += f"Total Size: {file['Bytes']} bytes"
+            if int(file['Bytes']) == 1:
+                info_text += f"Total Size: {file['Bytes']} byte"
+            else:
+                info_text += f"Total Size: {file['Bytes']} bytes"
 
             self.folder_att.clear()
             self.folder_att.insertPlainText(info_text)
@@ -129,14 +163,8 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
 
 
 if __name__ == "__main__":
-    application = QtWidgets.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
+    main_window = MainWindow()
+    main_window.show()
+    sys.exit(app.exec_())
 
-    volume_name = 'D:'
-    if FAT32.check_fat32(volume_name):
-        vol = FAT32(volume_name)
-    elif NTFS.is_ntfs(volume_name):
-        vol = NTFS(volume_name)
-
-    window = FolderExplorer(vol)
-    window.show()
-    sys.exit(application.exec_())
