@@ -46,6 +46,11 @@ class DriveInfoWindow(QtWidgets.QWidget):
         self.info_label = QtWidgets.QLabel(drive_info)
         layout.addWidget(self.info_label)
         self.setLayout(layout)
+        self.resize(400, 300)
+
+        font = self.info_label.font()
+        font.setPointSize(12)
+        self.info_label.setFont(font)
 
 
 class TextFileContentWindow(QtWidgets.QWidget):
@@ -57,6 +62,12 @@ class TextFileContentWindow(QtWidgets.QWidget):
         self.content_textedit.setPlainText(content)
         layout.addWidget(self.content_textedit)
         self.setLayout(layout)
+        self.resize(600, 400)
+
+        font = self.content_textedit.font()
+        font.setPointSize(12)
+        self.content_textedit.setFont(font)
+
 
 
 class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
