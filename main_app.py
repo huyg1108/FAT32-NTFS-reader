@@ -54,9 +54,9 @@ class DriveInfoWindow(QtWidgets.QWidget):
 
 
 class TextFileContentWindow(QtWidgets.QWidget):
-    def __init__(self, content: str):
+    def __init__(self, content: str, title):
         super().__init__()
-        self.setWindowTitle("Text File Content")
+        self.setWindowTitle(title)
         layout = QtWidgets.QVBoxLayout()
         self.content_textedit = QtWidgets.QTextEdit()
         self.content_textedit.setPlainText(content)
@@ -167,7 +167,7 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
 
             if os.path.basename(file_path)[-4:] == '.txt':
                 content = self.vol.get_text_content(file_path)
-                self.text_file_content_window = TextFileContentWindow(content)
+                self.text_file_content_window = TextFileContentWindow(content, os.path.basename(file_path))
                 self.text_file_content_window.show()
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", str(e))
