@@ -75,8 +75,9 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         super(FolderExplorer, self).__init__()
         self.setupUi(self)
         self.vol = volume
+        self.vol_name = volume_name
         self.populate()
-        root_index = self.model.index(volume_name) 
+        root_index = self.model.index(self.vol_name) 
         self.treeView.setRootIndex(root_index)
 
         # Interaction
@@ -84,6 +85,10 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         self.treeView.clicked.connect(self.show_path)
         self.treeView.doubleClicked.connect(self.show_txt_file_content)
         self.disk_info.clicked.connect(self.show_drive_info)
+
+        # Context menu
+        self.treeView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.treeView.customContextMenuRequested.connect(self.show_context_menu)
 
         # Font for QTextEdit
         font = QtGui.QFont("Arial", 12)
@@ -167,11 +172,26 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
 
             if os.path.basename(file_path)[-4:] == '.txt':
                 content = self.vol.get_text_content(file_path)
-                print(content)
                 self.text_file_content_window = TextFileContentWindow(content, os.path.basename(file_path))
                 self.text_file_content_window.show()
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", str(e))
+
+    def show_context_menu(self, pos):
+        menu = QtWidgets.QMenu()
+        delete_action = menu.addAction("Delete")
+        action = menu.exec_(self.treeView.viewport().mapToGlobal(pos))
+        if action == delete_action:
+            try:
+                print('Xoa')
+                # index = self.treeView.currentIndex()
+                # file_path = self.model.filePath(index)
+                # self.vol.move_to_recycle_bin(file_path)
+                # self.populate()
+                # root_index = self.model.index(self.vol_name) 
+                # self.treeView.setRootIndex(root_index)
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "Error", str(e))
 
 
 if __name__ == "__main__":
@@ -179,4 +199,3 @@ if __name__ == "__main__":
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec_())
-
