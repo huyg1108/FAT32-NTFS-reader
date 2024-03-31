@@ -43,9 +43,9 @@ class MainWindow(QtWidgets.QMainWindow):
             volume = NTFS(volume_name)
 
         if volume:
-            # Kiểm tra nếu cửa sổ FolderExplorer đã được tạo trước đó
+            # Check if FolderExplorer window was created before
             if self.folder_explorer and self.folder_explorer.isVisible():
-                self.folder_explorer.close()  # Đóng cửa sổ cũ nếu còn mở
+                self.folder_explorer.close()
             self.folder_explorer = FolderExplorer(volume, volume_name)
             self.folder_explorer.show()
 
@@ -124,6 +124,12 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         self.model = QtWidgets.QFileSystemModel()
         self.model.setRootPath(QtCore.QDir.rootPath())
         self.treeView.setModel(self.model)
+
+    def reset_volume(self):
+        if FAT32.check_fat32(self.vol_name):
+            self.vol = FAT32(self.vol_name)
+        elif NTFS.is_ntfs(self.vol_name):
+            self.vol = NTFS(self.vol_name)
 
     def show_folder_info(self):
         try:
@@ -208,61 +214,77 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         
     def show_context_menu(self, pos):
         menu = QtWidgets.QMenu()
-        delete_action = menu.addAction("Delete")
-        paste_action = menu.addAction("Paste")
-        copy_action = menu.addAction("Copy")
         cut_action = menu.addAction("Cut")
+        copy_action = menu.addAction("Copy")
+        paste_action = menu.addAction("Paste")
+        delete_action = menu.addAction("Delete")
         rename_action = menu.addAction("Rename")
         action = menu.exec_(self.treeView.viewport().mapToGlobal(pos))
+        
+        # Delete
         if action == delete_action:
             try:
-                print('Xoa')
                 index = self.treeView.currentIndex()
                 file_path = self.model.filePath(index)
                 file_path = file_path.replace("/", "\\")
                 send2trash(file_path)
-                self.populate()
-                root_index = self.model.index(self.vol_name) 
-                self.treeView.setRootIndex(root_index)
+
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
+
+        # Copy
         if action == copy_action:
             try:
-                print('Copy')
                 index = self.treeView.currentIndex()
                 file_path = self.model.filePath(index)
                 self.storeCopyFilePath = file_path
                 self.copy_cut_state_flag = 1
+
+                self.reset_volume()
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
+        # Cut
         if action == cut_action:
             try:
-                print('Cut')
                 index = self.treeView.currentIndex()
                 file_path = self.model.filePath(index)
                 self.storeCopyFilePath = file_path
                 self.copy_cut_state_flag = 2
+
+                self.reset_volume()
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
+
+        # Paste
         if action == paste_action:
+            index = self.treeView.currentIndex()
+            folder_path = self.model.filePath(index)
+            folder_path = folder_path.replace("/", "\\")
+            self.storeCopyFilePath = self.storeCopyFilePath.replace("/", "\\")
+
+            if os.path.exists(self.storeCopyFilePath):
+                # Check if file is exist or not
+                dest_file_path = os.path.join(folder_path, os.path.basename(self.storeCopyFilePath))
+                if os.path.exists(dest_file_path):
+                    choice = QtWidgets.QMessageBox.question(self, 'File Exists',
+                                                             'A file with the same name already exists. Do you want to replace it?',
+                                                             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+                    if choice == QtWidgets.QMessageBox.No:
+                        return
+
             try:
-                print('Paste')
-                index = self.treeView.currentIndex()
-                folder_path = self.model.filePath(index)
-                folder_path = folder_path.replace("/", "\\")
-                self.storeCopyFilePath = self.storeCopyFilePath.replace("/", "\\")
                 if self.copy_cut_state_flag == 1:
                     shutil.copy(self.storeCopyFilePath, folder_path)
                 elif self.copy_cut_state_flag == 2:
                     shutil.move(self.storeCopyFilePath, folder_path)
-                self.populate()
-                root_index = self.model.index(self.vol_name) 
-                self.treeView.setRootIndex(root_index)
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(self, "Error", str(e))
+            except shutil.SameFileError:
+                QtWidgets.QMessageBox.critical(self, "Error", "The file already exists in the destination folder.")
+            finally:
+                self.reset_volume()
+
+        # Rename
         if action == rename_action:
             try:
-                print('Rename')
                 index = self.treeView.currentIndex()
                 file_path = self.model.filePath(index)
                 file_path = file_path.replace("/", "\\")
@@ -270,9 +292,8 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
                 if ok:
                     new_path = os.path.join(os.path.dirname(file_path), new_name)
                     os.rename(file_path, new_path)
-                    self.populate()
-                    root_index = self.model.index(self.vol_name) 
-                    self.treeView.setRootIndex(root_index)
+
+                    self.reset_volume()
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
             
