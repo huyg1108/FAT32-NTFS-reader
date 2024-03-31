@@ -25,7 +25,7 @@ class Ui_MainWindow(object):
         self.label.setGeometry(QRect(90, 40, 195, 23))
         self.comboBox = QComboBox(self.centralwidget)
         self.comboBox.setObjectName(u"comboBox")
-        self.comboBox.setGeometry(QRect(110, 80, 161, 21))
+        self.comboBox.setGeometry(QRect(120, 80, 141, 31))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")

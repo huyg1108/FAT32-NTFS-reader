@@ -30,10 +30,10 @@
    <widget class="QComboBox" name="comboBox">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>120</x>
       <y>80</y>
-      <width>161</width>
-      <height>21</height>
+      <width>141</width>
+      <height>31</height>
      </rect>
     </property>
    </widget>

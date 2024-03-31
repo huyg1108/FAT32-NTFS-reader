@@ -12,15 +12,25 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.ui = disk.Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowTitle("Volume Selection")
         self.populate_disk_list()
         self.ui.comboBox.activated[str].connect(self.drive_selected)
         self.folder_explorer = None
         self.setStyleSheet("QMainWindow { background-color: #CCCCCC; }")
 
+        icon = QtGui.QIcon("icon/drive_icon.png")
+        self.setWindowIcon(icon)
+
     def populate_disk_list(self):
-        disks = [partition.device for partition in disk_partitions(all=False)]
+        disks = [partition.device.rstrip("\\") for partition in disk_partitions(all=False)]
         self.ui.comboBox.clear()
-        self.ui.comboBox.addItems(disks)
+
+        for disk in disks:
+            icon = QtGui.QIcon("icon/drive_icon.png")
+            self.ui.comboBox.addItem(icon, disk)
+
+        font = QtGui.QFont("Arial", 10)
+        self.ui.comboBox.setFont(font)
 
     def drive_selected(self, volume_name):
         volume_name = volume_name.rstrip("\\")
@@ -52,6 +62,9 @@ class DriveInfoWindow(QtWidgets.QWidget):
         font.setPointSize(12)
         self.info_label.setFont(font)
 
+        icon = QtGui.QIcon("icon/drive_icon.png")
+        self.setWindowIcon(icon)
+
 
 class TextFileContentWindow(QtWidgets.QWidget):
     def __init__(self, content: str, title):
@@ -68,6 +81,8 @@ class TextFileContentWindow(QtWidgets.QWidget):
         font.setPointSize(12)
         self.content_textedit.setFont(font)
 
+        icon = QtGui.QIcon("icon/text_icon.png")
+        self.setWindowIcon(icon)
 
 
 class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
@@ -76,9 +91,13 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         self.setupUi(self)
         self.vol = volume
         self.vol_name = volume_name
+        self.setWindowTitle(self.vol_name)
         self.populate()
         root_index = self.model.index(self.vol_name) 
         self.treeView.setRootIndex(root_index)
+
+        icon = QtGui.QIcon("icon/file_icon.png")
+        self.setWindowIcon(icon)
 
         # Interaction
         self.treeView.clicked.connect(self.show_folder_info)
@@ -162,6 +181,10 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
             folder_path = self.model.filePath(index)
             self.lineEdit.clear()
             self.lineEdit.setText(folder_path)
+
+            font = self.lineEdit.font()
+            font.setPointSize(10)
+            self.lineEdit.setFont(font)
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", str(e))
 
