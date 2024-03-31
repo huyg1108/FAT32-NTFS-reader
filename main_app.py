@@ -6,6 +6,8 @@ from typing import Union
 from NTFS import *
 from FAT32 import *
 from ui import app, disk
+import shutil
+from send2trash import send2trash
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -199,7 +201,13 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
                 self.text_file_content_window.show()
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", str(e))
-
+    def move_to_recycle_bin(self, file_path):
+        file_path = file_path.replace("/", "\\")
+        send2trash(file_path)
+    def restore_file_from_recycle_bin(self, file_path):
+        pass
+        
+        
     def show_context_menu(self, pos):
         menu = QtWidgets.QMenu()
         delete_action = menu.addAction("Delete")
@@ -207,12 +215,14 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         if action == delete_action:
             try:
                 print('Xoa')
-                # index = self.treeView.currentIndex()
-                # file_path = self.model.filePath(index)
-                # self.vol.move_to_recycle_bin(file_path)
-                # self.populate()
-                # root_index = self.model.index(self.vol_name) 
-                # self.treeView.setRootIndex(root_index)
+                index = self.treeView.currentIndex()
+                file_path = self.model.filePath(index)
+                print(file_path)
+                self.move_to_recycle_bin(file_path)
+                print(file_path)
+                self.populate()
+                root_index = self.model.index(self.vol_name) 
+                self.treeView.setRootIndex(root_index)
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
 
