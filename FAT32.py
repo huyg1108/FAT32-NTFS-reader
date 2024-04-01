@@ -18,7 +18,7 @@ class RDETentry:
     def __init__(self, data) -> None:
         self.raw_data = data
         self.flag = data[0xB:0xC]
-        self.is_subentry: bool = False
+        self.is_subentry: bool = self.check_subentry()
         self.is_deleted: bool = False
         self.is_empty: bool = False
         self.is_label: bool = False
@@ -29,9 +29,6 @@ class RDETentry:
         self.name = b""
         self.ext = b""
         self.long_name = ""
-
-        if self.flag == b'\x0f':
-            self.is_subentry = True
 
         if not self.is_subentry:
             self.name = self.raw_data[:0x8]
@@ -50,28 +47,12 @@ class RDETentry:
 
             self.time_created_raw = int.from_bytes(self.raw_data[0xD:0x10], byteorder='little')
             self.date_created_raw = int.from_bytes(self.raw_data[0x10:0x12], byteorder='little')
-            self.last_accessed_raw = int.from_bytes(self.raw_data[0x12:0x14], byteorder='little')
-
             self.time_updated_raw = int.from_bytes(self.raw_data[0x16:0x18], byteorder='little')
             self.date_updated_raw = int.from_bytes(self.raw_data[0x18:0x1A], byteorder='little')
 
-            h = (self.time_created_raw & 0b111110000000000000000000) >> 19
-            m = (self.time_created_raw & 0b000001111110000000000000) >> 13
-            s = (self.time_created_raw & 0b000000000001111110000000) >> 7
-            year = 1980 + ((self.date_created_raw & 0b1111111000000000) >> 9)
-            mon = (self.date_created_raw & 0b0000000111100000) >> 5
-            day = self.date_created_raw & 0b0000000000011111
+            self.extract_raw_created()
+            self.extract_raw_updated()
 
-            self.date_created = datetime(year, mon, day, h, m, s)
-
-            h = (self.time_updated_raw & 0b1111100000000000) >> 11
-            m = (self.time_updated_raw & 0b0000011111100000) >> 5
-            s = (self.time_updated_raw & 0b0000000000011111) * 2
-            year = 1980 + ((self.date_updated_raw & 0b1111111000000000) >> 9)
-            mon = (self.date_updated_raw & 0b0000000111100000) >> 5
-            day = self.date_updated_raw & 0b0000000000011111
-
-            self.date_updated = datetime(year, mon, day, h, m, s)
             # https://people.cs.umass.edu/~liberato/courses/2017-spring-compsci365/lecture-notes/11-fats-and-directory-entries/
             # why this line is written like this
             self.start_cluster = int.from_bytes(self.raw_data[0x14:0x16][::-1] + self.raw_data[0x1A:0x1C][::-1], byteorder='big') 
@@ -86,6 +67,32 @@ class RDETentry:
                     self.name = self.name[:-2]
                     break
             self.name = self.name.decode('utf-16le').strip('\x00')
+
+    def check_subentry(self) -> bool:
+        if self.flag == b'\x0f':
+            self.is_subentry = True
+            return True
+        return False
+
+    def extract_raw_created(self):
+        h = (self.time_created_raw & 0b111110000000000000000000) >> 19
+        m = (self.time_created_raw & 0b000001111110000000000000) >> 13
+        s = (self.time_created_raw & 0b000000000001111110000000) >> 7
+        year = 1980 + ((self.date_created_raw & 0b1111111000000000) >> 9)
+        mon = (self.date_created_raw & 0b0000000111100000) >> 5
+        day = self.date_created_raw & 0b0000000000011111
+
+        self.date_created = datetime(year, mon, day, h, m, s)
+
+    def extract_raw_updated(self):
+        h = (self.time_updated_raw & 0b1111100000000000) >> 11
+        m = (self.time_updated_raw & 0b0000011111100000) >> 5
+        s = (self.time_updated_raw & 0b0000000000011111) * 2
+        year = 1980 + ((self.date_updated_raw & 0b1111111000000000) >> 9)
+        mon = (self.date_updated_raw & 0b0000000111100000) >> 5
+        day = self.date_updated_raw & 0b0000000000011111
+
+        self.date_updated = datetime(year, mon, day, h, m, s)
 
     def is_active_entry(self) -> bool:
         return not (self.is_empty or self.is_subentry or self.is_deleted or self.is_label or Attribute.SYSTEM in self.attr)
@@ -250,41 +257,6 @@ class FAT32:
             else:
                 raise Exception("Not a directory")
         return cdet
-
-    # def get_all_entry(self, path = ""):
-    #     if path != "":
-    #         cdet = self.visit_dir(path)
-    #         entry_list = cdet.get_active_entries()
-    #     else:
-    #         entry_list = self.RDET.get_active_entries()
-    #     return entry_list
-
-    # def get_items(self, path = ""):
-    #     items = []
-    #     entry_list = self.get_all_entry(path)
-    #     for entry in entry_list:
-    #         if (entry.long_name != "." and entry.long_name != ".."):
-    #             items.append(entry.long_name)
-    #     return items
-
-    # def get_dir(self, path = ""):
-    #     try:
-    #         entry_list = self.get_all_entry(path)
-    #         ret = []
-    #         for entry in entry_list:
-    #             obj = {}
-    #             obj["Flags"] = entry.attr.value
-    #             obj["Date Modified"] = entry.date_updated
-    #             obj["Size"] = entry.size
-    #             obj["Name"] = entry.long_name
-    #             if entry.start_cluster == 0:
-    #                 obj["Sector"] = (entry.start_cluster + 2) * self.SC
-    #             else:
-    #                 obj["Sector"] = entry.start_cluster * self.SC
-    #             ret.append(obj)
-    #         return ret
-    #     except Exception as e:
-    #         raise(e)
 
     def change_dir(self, path=""):
         if path == "":

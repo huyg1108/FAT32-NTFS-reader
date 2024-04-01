@@ -209,6 +209,7 @@ class NTFS:
 
             self.record_size = self.boot_sector["Bytes of one MFT"]
             self.mft_offset = self.boot_sector["First cluster of MFT"]
+
             self.fd.seek(self.mft_offset * self.sectors_per_cluster * self.bytes_per_sector)
             
             self.mft_file = MFT_file(self.fd.read(self.record_size))
