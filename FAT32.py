@@ -168,7 +168,7 @@ class FAT32:
         try:
             self.boot_sector_raw = self.fd.read(0x200)
             self.boot_sector = {}
-            self.__extract_boot_sector()
+            self.extract_boot_sector()
             if self.boot_sector["FAT type"] != b"FAT32   ":
                 raise Exception("Not FAT32")
             self.boot_sector["FAT type"] = self.boot_sector["FAT type"].decode()
@@ -206,7 +206,7 @@ class FAT32:
         except Exception as e:
             exit()
 
-    def __extract_boot_sector(self):
+    def extract_boot_sector(self):
         self.boot_sector['Bytes Per Sector'] = int.from_bytes(self.boot_sector_raw[0xB:0xD], byteorder='little')
         self.boot_sector['Sectors Per Cluster'] = int.from_bytes(self.boot_sector_raw[0xD:0xE], byteorder='little')
         self.boot_sector['Sectors before FAT table'] = int.from_bytes(self.boot_sector_raw[0xE:0x10], byteorder='little')
@@ -216,7 +216,7 @@ class FAT32:
         self.boot_sector['Starting Cluster of RDET'] = int.from_bytes(self.boot_sector_raw[0x2C:0x30], byteorder='little')
         self.boot_sector['FAT type'] = self.boot_sector_raw[0x52:0x5A]
 
-    def __offset_from_cluster(self, index):
+    def offset_from_cluster(self, index):
         return self.SB + self.SF * self.NF + (index - 2) * self.SC
     
     def format_path(self, path):
@@ -351,7 +351,7 @@ class FAT32:
         index_list = self.FAT[0].get_cluster_chain(cluster_index)
         data = b""
         for i in index_list:
-            off = self.__offset_from_cluster(i)
+            off = self.offset_from_cluster(i)
             self.fd.seek(off * self.BS)
             data += self.fd.read(self.SC * self.BS)
         return data
@@ -379,7 +379,7 @@ class FAT32:
             for i in index_list:
                 if size_left <= 0:
                     break
-                off = self.__offset_from_cluster(i)
+                off = self.offset_from_cluster(i)
                 self.fd.seek(off * self.BS)
                 raw_data = self.fd.read(min(self.SC * self.BS, size_left))
                 size_left -= self.SC * self.BS
