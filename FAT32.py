@@ -14,22 +14,6 @@ class Attribute(Flag):
     DIRECTORY = auto()
     ARCHIVE = auto()
 
-class FAT:
-    def __init__(self, data) -> None:
-        self.raw_data = data
-        self.elements = []
-        for i in range(0, len(self.raw_data), 4):
-            self.elements.append(int.from_bytes(self.raw_data[i:i + 4], byteorder='little'))
-  
-    def get_cluster_chain(self, index: int) -> 'list[int]':
-        index_list = []
-        while True:
-            index_list.append(index)
-            index = self.elements[index]
-            if index == 0x0FFFFFFF or index == 0x0FFFFFF7:
-                break
-        return index_list
-
 class RDETentry:
     def __init__(self, data) -> None:
         self.raw_data = data
@@ -154,6 +138,22 @@ class RDET:
             if self.entries[i].is_active_entry() and self.entries[i].long_name.lower() == name.lower():
                 return self.entries[i]
         return None
+
+class FAT:
+    def __init__(self, data) -> None:
+        self.raw_data = data
+        self.elements = []
+        for i in range(0, len(self.raw_data), 4):
+            self.elements.append(int.from_bytes(self.raw_data[i:i + 4], byteorder='little'))
+  
+    def get_cluster_chain(self, index: int) -> 'list[int]':
+        index_list = []
+        while True:
+            index_list.append(index)
+            index = self.elements[index]
+            if index == 0x0FFFFFFF or index == 0x0FFFFFF7:
+                break
+        return index_list
 
 
 class FAT32:
