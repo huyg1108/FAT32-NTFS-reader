@@ -191,12 +191,12 @@ class NTFS:
         self.cwd = [self.name]
         
         try:
-            self.disk_file = open(r'\\.\%s' % self.name, 'rb')
+            self.fd = open(r'\\.\%s' % self.name, 'rb')
         except (FileNotFoundError, PermissionError, Exception) as e:
             exit()
 
         try:
-            self.boot_sector_raw = self.disk_file.read(0x200)
+            self.boot_sector_raw = self.fd.read(0x200)
             self.boot_sector = {}
             self.read_boot_sector()
 
@@ -209,12 +209,12 @@ class NTFS:
 
             self.record_size = self.boot_sector["Bytes of one MFT"]
             self.mft_offset = self.boot_sector["First cluster of MFT"]
-            self.disk_file.seek(self.mft_offset * self.sectors_per_cluster * self.bytes_per_sector)
+            self.fd.seek(self.mft_offset * self.sectors_per_cluster * self.bytes_per_sector)
             
-            self.mft_file = MFT_file(self.disk_file.read(self.record_size))
+            self.mft_file = MFT_file(self.fd.read(self.record_size))
             mft_record: list[MFT_record] = []
             for _ in range(2, self.mft_file.num_sector, 2):
-                entry_data = self.disk_file.read(self.record_size)
+                entry_data = self.fd.read(self.record_size)
                 if entry_data[:4] == b"FILE":
                     try:
                         mft_record.append(MFT_record(entry_data))
@@ -228,8 +228,8 @@ class NTFS:
     @staticmethod
     def is_ntfs(name: str):
         try:
-            with open(r'\\.\%s' % name, 'rb') as disk_file:
-                Type_ID = disk_file.read(0xB)[3:]
+            with open(r'\\.\%s' % name, 'rb') as fd:
+                Type_ID = fd.read(0xB)[3:]
                 if Type_ID == b'NTFS    ':
                     return True
                 return False
@@ -392,11 +392,11 @@ class NTFS:
             size_left = record.data['size']
             offset = record.data['cluster_offset'] * self.sectors_per_cluster * self.bytes_per_sector
             cluster_num = record.data['cluster_size']
-            self.disk_file.seek(offset)
+            self.fd.seek(offset)
             for _ in range(cluster_num):
                 if size_left <= 0:
                     break
-                raw_data = self.disk_file.read(min(self.sectors_per_cluster * self.bytes_per_sector, size_left))
+                raw_data = self.fd.read(min(self.sectors_per_cluster * self.bytes_per_sector, size_left))
                 size_left -= self.sectors_per_cluster * self.bytes_per_sector
                 try:
                     data += raw_data.decode()
@@ -425,5 +425,5 @@ class NTFS:
         return s
 
     def __del__(self):
-        if getattr(self, "disk_file", None):
-            self.disk_file.close()
+        if getattr(self, "fd", None):
+            self.fd.close()

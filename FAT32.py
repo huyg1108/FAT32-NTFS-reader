@@ -25,8 +25,8 @@ class RDETentry:
         self.attr = Attribute(0)
         self.size = 0
         self.date_created = 0
-        self.last_accessed = 0
         self.date_updated = 0
+        self.name = b""
         self.ext = b""
         self.long_name = ""
 
@@ -64,12 +64,6 @@ class RDETentry:
 
             self.date_created = datetime(year, mon, day, h, m, s)
 
-            year = 1980 + ((self.last_accessed_raw & 0b1111111000000000) >> 9)
-            mon = (self.last_accessed_raw & 0b0000000111100000) >> 5
-            day = self.last_accessed_raw & 0b0000000000011111
-
-            self.last_accessed = datetime(year, mon, day)
-
             h = (self.time_updated_raw & 0b1111100000000000) >> 11
             m = (self.time_updated_raw & 0b0000011111100000) >> 5
             s = (self.time_updated_raw & 0b0000000000011111) * 2
@@ -79,7 +73,7 @@ class RDETentry:
 
             self.date_updated = datetime(year, mon, day, h, m, s)
             # https://people.cs.umass.edu/~liberato/courses/2017-spring-compsci365/lecture-notes/11-fats-and-directory-entries/
-            # why this like is written like this
+            # why this line is written like this
             self.start_cluster = int.from_bytes(self.raw_data[0x14:0x16][::-1] + self.raw_data[0x1A:0x1C][::-1], byteorder='big') 
             self.size = int.from_bytes(self.raw_data[0x1C:0x20], byteorder='little')
 
@@ -382,7 +376,7 @@ class FAT32:
                 off = self.offset_from_cluster(i)
                 self.fd.seek(off * self.BS)
                 raw_data = self.fd.read(min(self.SC * self.BS, size_left))
-                size_left -= self.SC * self.BS
+                size_left -= self.SC * self.BS                
                 try:
                     data += raw_data.decode()
                 except UnicodeDecodeError as e:
