@@ -17,7 +17,6 @@ class BitmapDIB:
         self.compressionAlgorithm = compressionAlgorithm
         self.pixelArraySize = pixelArraySize
         self.horizontalResolution = horizontalResolution
-        self.verticalResolution = verticalResolution
         self.numColor = numColor
         self.numImportantColor = numImportantColor
 
@@ -126,9 +125,6 @@ def convertToInt(s):
     return int(s)
 
 # input a bmp image from url
-bmp = BMP(BitmapHeader(0, 0, 0), BitmapDIB(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), [])
-inputBitmapFile("marbles.bmp", bmp)
-# draw this image to console
 # printImageToConsole(bmp)
 import sys
 
@@ -151,7 +147,7 @@ def draw_image_from_pixels(pixels):
 if __name__ == "__main__":
     # Example pixel array
     bmp = BMP(BitmapHeader(0, 0, 0), BitmapDIB(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), [])
-    inputBitmapFile("marbles.bmp", bmp)
+    inputBitmapFile("D:/1.bmp", bmp)
     pixel_array = [[(pixel.red, pixel.green, pixel.blue) for pixel in row] for row in bmp.colors]
 
     # Create the application

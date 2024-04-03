@@ -8,6 +8,7 @@ from FAT32 import *
 from ui import app, disk
 import shutil
 from send2trash import send2trash
+from bmp import * 
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -86,6 +87,37 @@ class TextFileContentWindow(QtWidgets.QWidget):
         icon = QtGui.QIcon("icon/text_icon.png")
         self.setWindowIcon(icon)
 
+class BmpFileContentWindow(QtWidgets.QWidget):
+    def __init__(self, image_path: str, title: str):
+        super().__init__()
+        self.setWindowTitle(title)
+        layout = QtWidgets.QVBoxLayout()
+        # Tạo một QLabel để hiển thị hình ảnh
+        self.image_label = QLabel()
+
+        bmp = BMP(BitmapHeader(0, 0, 0), BitmapDIB(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), [])
+        inputBitmapFile(image_path, bmp)
+        pixel_array = [[(pixel.green, pixel.red, pixel.blue) for pixel in row] for row in bmp.colors]
+
+        # Tạo một QPixmap từ đường dẫn của hình ảnh bitmap
+        # pixmap = QPixmap(image_path)
+        # Draw the image from pixel array
+        image = draw_image_from_pixels(pixel_array)
+
+        # Set the image to the QLabel
+        pixmap = QPixmap.fromImage(image)
+
+        # Đặt QPixmap cho QLabel
+        self.image_label.setPixmap(pixmap)
+
+        # Thêm QLabel vào layout
+        layout.addWidget(self.image_label)
+        self.setLayout(layout)
+
+        # Thiết lập biểu tượng cửa sổ
+        icon = QtGui.QIcon("icon/text_icon.png")
+        self.setWindowIcon(icon)
+
 
 class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
     # 0: nothing, 1: copy, 2: cut
@@ -108,6 +140,7 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         self.treeView.clicked.connect(self.show_folder_info)
         self.treeView.clicked.connect(self.show_path)
         self.treeView.doubleClicked.connect(self.show_txt_file_content)
+        self.treeView.doubleClicked.connect(self.show_bitmap_image)
         self.disk_info.clicked.connect(self.show_drive_info)
 
         # Context menu
@@ -204,14 +237,26 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
             index = self.treeView.currentIndex()
             file_path = self.model.filePath(index)
 
-            if os.path.basename(file_path)[-4:] == '.txt':
+            if os.path.basename(file_path)[-4:].lower() == '.txt':
                 content = self.vol.get_text_content(file_path)
                 self.text_file_content_window = TextFileContentWindow(content, os.path.basename(file_path))
                 self.text_file_content_window.show()
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", str(e))
         
-        
+    def show_bitmap_image(self):
+        try:
+            index = self.treeView.currentIndex()
+            file_path = self.model.filePath(index)
+            self.vol.change_dir(file_path)
+
+            if os.path.basename(file_path)[-4:].lower() == '.bmp':
+                self.image_window = BmpFileContentWindow(file_path, os.path.basename(file_path))
+                self.image_window.show()
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Error", str(e))
+
+
     def show_context_menu(self, pos):
         menu = QtWidgets.QMenu()
         cut_action = menu.addAction("Cut")
@@ -267,7 +312,7 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
                 dest_file_path = os.path.join(folder_path, os.path.basename(self.storeCopyFilePath))
                 if os.path.exists(dest_file_path):
                     choice = QtWidgets.QMessageBox.question(self, 'File Exists',
-                                                             'A file with the same name already exists. Do you want to replace it?',
+                                                             'A file wth the same name already exists. Do you want to replace it?',
                                                              QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                     if choice == QtWidgets.QMessageBox.No:
                         return
@@ -297,7 +342,6 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
             
-
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
