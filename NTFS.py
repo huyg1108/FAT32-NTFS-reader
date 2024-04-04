@@ -3,6 +3,8 @@ import os
 from enum import Flag, auto
 from datetime import datetime
 from path_handle import *
+import subprocess
+import sys
 
 def format_time(timestamp):
     return datetime.fromtimestamp((timestamp - 116444736000000000) // 10000000)
@@ -35,7 +37,6 @@ class MFTentry:
         self.file_id = int.from_bytes(self.raw_data[0x2C:0x30], byteorder = 'little')
         self.flag = self.raw_data[0x16]
         if self.flag == 0 or self.flag == 2:
-            # Deleted entry, skip
             raise Exception
 
         standard_info_start = int.from_bytes(self.raw_data[0x14:0x16], byteorder = 'little')
@@ -227,6 +228,20 @@ class NTFS:
         except Exception as e:
             exit()
 
+    def mft_header_offset(self, target_entry: MFTentry):
+        try:
+            if target_entry is None:
+                print(f"Folder not found.")
+                return
+
+            mft_start_offset = self.mft_offset * self.sectors_per_cluster * self.bytes_per_sector
+            entry_offset = mft_start_offset + (target_entry.file_id * self.entry_size)
+            
+            return entry_offset
+        except Exception as e:
+            raise e
+
+
     @staticmethod
     def is_ntfs(name: str):
         try:
@@ -323,7 +338,7 @@ class NTFS:
         except Exception as e:
             pass
 
-    def get_folder_file_information(self, path, key):
+    def get_folder_file_information(self, path: str, key):
         try:
             # is folder
             if key == 0:
@@ -345,6 +360,7 @@ class NTFS:
             obj["Attribute"] = entry.standard_info["flags"]
             obj["Bytes"] = entry.data['size']
 
+            print(self.mft_header_offset(entry))
             if entry.data['resident']:
                 obj["Sector"] = self.mft_offset * self.sectors_per_cluster + entry.file_id
             else:
@@ -405,6 +421,21 @@ class NTFS:
                 except Exception as e:
                     raise (e)
             return data
+
+    def delete_folder_file(self, path: str, key):
+        try:
+            # is folder
+            if key == 0:
+                cur_dir = self.visit_dir(path)
+                entry = cur_dir
+            # is file
+            else:
+                cur_dir = self.visit_dir(get_parent_path(path))
+                file_name = os.path.basename(path)
+                entry = cur_dir.find_entry(file_name)
+            subprocess.call(["delete.exe", self.name, str(self.mft_header_offset(entry)), "0", str(self.entry_size)])
+        except Exception as e:
+            raise (e)
 
     main_components = [
         "Type",

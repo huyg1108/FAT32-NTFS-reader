@@ -92,29 +92,22 @@ class BmpFileContentWindow(QtWidgets.QWidget):
         super().__init__()
         self.setWindowTitle(title)
         layout = QtWidgets.QVBoxLayout()
-        # Tạo một QLabel để hiển thị hình ảnh
+
         self.image_label = QLabel()
 
         bmp = BMP(BitmapHeader(0, 0, 0), BitmapDIB(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), [])
         inputBitmapFile(image_path, bmp)
         pixel_array = [[(pixel.green, pixel.red, pixel.blue) for pixel in row] for row in bmp.colors]
 
-        # Tạo một QPixmap từ đường dẫn của hình ảnh bitmap
-        # pixmap = QPixmap(image_path)
-        # Draw the image from pixel array
         image = draw_image_from_pixels(pixel_array)
 
-        # Set the image to the QLabel
         pixmap = QPixmap.fromImage(image)
 
-        # Đặt QPixmap cho QLabel
         self.image_label.setPixmap(pixmap)
 
-        # Thêm QLabel vào layout
         layout.addWidget(self.image_label)
         self.setLayout(layout)
 
-        # Thiết lập biểu tượng cửa sổ
         icon = QtGui.QIcon("icon/text_icon.png")
         self.setWindowIcon(icon)
 
@@ -270,13 +263,20 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         if action == delete_action:
             try:
                 index = self.treeView.currentIndex()
-                file_path = self.model.filePath(index)
-                file_path = file_path.replace("/", "\\")
-                send2trash(file_path)
+                folder_path = self.model.filePath(index)
+                folder_path = folder_path.replace("/", "\\")
 
+                if check_path_type(folder_path) == 0:
+                    self.vol.delete_folder_file(folder_path, 0)
+                else:
+                    self.vol.delete_folder_file(folder_path, 1)
+                    
+                self.reset_volume()
+                self.populate()
+                root_index = self.model.index(self.vol_name) 
+                self.treeView.setRootIndex(root_index)
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
-
         # Copy
         if action == copy_action:
             try:
@@ -288,6 +288,7 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
                 self.reset_volume()
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
+
         # Cut
         if action == cut_action:
             try:

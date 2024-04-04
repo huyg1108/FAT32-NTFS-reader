@@ -4,6 +4,8 @@ from itertools import chain
 import re
 import os
 from path_handle import *
+import subprocess
+import sys
 
 # thông tin của một entry
 class Attribute(Flag):
@@ -103,6 +105,7 @@ class RDETentry:
 
     def is_archive(self) -> bool:
         return Attribute.ARCHIVE in self.attr
+
 class RDET:
     def __init__(self, data: bytes,starting_offset) -> None:
         self.raw_data: bytes = data
@@ -127,7 +130,7 @@ class RDET:
                 else:
                     self.entries[-1].long_name = self.entries[-1].name.strip().decode() + "." + extend
             long_name = ""
-            print(self.entries[-1].long_name, self.entries[-1].starting_offset)
+            # print(self.entries[-1].long_name, self.entries[-1].starting_offset)
 
     def get_active_entries(self) -> 'list[RDETentry]':
         entry_list = []
@@ -190,7 +193,7 @@ class FAT32:
             self.DET = {}
             
             start = self.boot_sector["Starting Cluster of RDET"]
-            print("vị trí bắt đầu của RDET là", self.offset_from_cluster(start) * self.BS)
+            # print("vị trí bắt đầu của RDET là", self.offset_from_cluster(start) * self.BS)
             self.DET[start] = RDET(self.get_all_cluster_data(start),self.offset_from_cluster(start) * self.BS)
             self.RDET = self.DET[start]
 
@@ -308,6 +311,8 @@ class FAT32:
             obj["Name"] = record.long_name
             obj["Attribute"] = record.attr
 
+            print(record.starting_offset)
+
             if record.start_cluster == 0:
                 obj["Sector"] = (record.start_cluster + 2) * self.SC
             else:
@@ -363,6 +368,23 @@ class FAT32:
             return data
         except:
             return ''
+
+    def delete_folder_file(self, path: str, key):
+        try:
+            if key == 0:
+                if not os.path.isabs(path):
+                    path = os.path.join(self.get_cwd(), path)
+                cdet = self.visit_dir(os.path.dirname(path))
+                file_name = os.path.basename(path)
+                record = cdet.find_entry(file_name)
+            else:
+                cdet = self.visit_dir(get_parent_path(path))
+                file_name = os.path.basename(path)
+                record = cdet.find_entry(file_name)
+            subprocess.call(["delete.exe", self.name, str(record.starting_offset), "1"])
+
+        except Exception as e:
+            raise (e)
 
     main_components = [
         "Bytes Per Sector",
