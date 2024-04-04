@@ -140,15 +140,15 @@ def draw_image_from_pixels(pixels):
     for y in range(height):
         for x in range(width):
             color = QColor(*pixels[y][x])
-            image.setPixelColor(x, y, color)
+            image.setPixelColor(x, height - y + 1, color)
 
     return image
 
 if __name__ == "__main__":
     # Example pixel array
     bmp = BMP(BitmapHeader(0, 0, 0), BitmapDIB(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), [])
-    inputBitmapFile("D:/1.bmp", bmp)
-    pixel_array = [[(pixel.red, pixel.green, pixel.blue) for pixel in row] for row in bmp.colors]
+    inputBitmapFile("lena.bmp", bmp)
+    pixel_array = [[(pixel.green, pixel.red, pixel.blue) for pixel in row] for row in bmp.colors]
 
     # Create the application
     app = QApplication(sys.argv)
