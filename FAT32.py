@@ -29,6 +29,7 @@ class RDETentry:
         self.name = b""
         self.ext = b""
         self.long_name = ""
+        self.starting_offset = 0
 
         if not self.is_subentry:
             self.name = self.raw_data[:0x8]
@@ -102,14 +103,14 @@ class RDETentry:
 
     def is_archive(self) -> bool:
         return Attribute.ARCHIVE in self.attr
-
 class RDET:
-    def __init__(self, data: bytes) -> None:
+    def __init__(self, data: bytes,starting_offset) -> None:
         self.raw_data: bytes = data
         self.entries: list[RDETentry] = []
         long_name = ""
         for i in range(0, len(data), 32):
             self.entries.append(RDETentry(self.raw_data[i: i + 32]))
+            self.entries[-1].starting_offset = i + starting_offset
             if self.entries[-1].is_empty or self.entries[-1].is_deleted:
                 long_name = ""
                 continue
@@ -126,6 +127,7 @@ class RDET:
                 else:
                     self.entries[-1].long_name = self.entries[-1].name.strip().decode() + "." + extend
             long_name = ""
+            print(self.entries[-1].long_name, self.entries[-1].starting_offset)
 
     def get_active_entries(self) -> 'list[RDETentry]':
         entry_list = []
@@ -188,7 +190,8 @@ class FAT32:
             self.DET = {}
             
             start = self.boot_sector["Starting Cluster of RDET"]
-            self.DET[start] = RDET(self.get_all_cluster_data(start))
+            print("vị trí bắt đầu của RDET là", self.offset_from_cluster(start) * self.BS)
+            self.DET[start] = RDET(self.get_all_cluster_data(start),self.offset_from_cluster(start) * self.BS)
             self.RDET = self.DET[start]
 
         except Exception as e:
@@ -216,7 +219,8 @@ class FAT32:
         self.boot_sector['Sectors Per FAT'] = int.from_bytes(self.boot_sector_raw[0x24:0x28], byteorder='little')
         self.boot_sector['Starting Cluster of RDET'] = int.from_bytes(self.boot_sector_raw[0x2C:0x30], byteorder='little')
         self.boot_sector['FAT type'] = self.boot_sector_raw[0x52:0x5A]
-
+    # offset from the start of the file to the start of the cluster
+    # return formula: Number Sector of Boot Sector + Number Sector of FAT table * Sector of FAT + (index - 2) * Number Sector of Cluster
     def offset_from_cluster(self, index):
         return self.SB + self.SF * self.NF + (index - 2) * self.SC
     
@@ -252,7 +256,7 @@ class FAT32:
                 if entry.start_cluster in self.DET:
                     cdet = self.DET[entry.start_cluster]
                     continue
-                self.DET[entry.start_cluster] = RDET(self.get_all_cluster_data(entry.start_cluster))
+                self.DET[entry.start_cluster] = RDET(self.get_all_cluster_data(entry.start_cluster), self.offset_from_cluster(entry.start_cluster) * self.BS)
                 cdet = self.DET[entry.start_cluster] 
             else:
                 raise Exception("Not a directory")
@@ -319,6 +323,7 @@ class FAT32:
         for i in index_list:
             off = self.offset_from_cluster(i)
             self.fd.seek(off * self.BS)
+            # data = sector per cluster * bytes per sector
             data += self.fd.read(self.SC * self.BS)
         return data
 
