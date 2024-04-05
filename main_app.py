@@ -111,15 +111,84 @@ class BmpFileContentWindow(QtWidgets.QWidget):
         icon = QtGui.QIcon("icon/bmp_icon.png")
         self.setWindowIcon(icon)
 
+
 class RecycleBinWindow(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, folder_explorer) -> None:
         super().__init__()
         self.setWindowTitle("Recycle Bin")
+        self.folder_explorer = folder_explorer
+        self.vol = folder_explorer.vol
 
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
 
-        self.resize(400, 300)
+        self.tree_widget = QtWidgets.QTreeWidget()
+        self.tree_widget.setHeaderLabels(["Name", "Original Location"])
+        layout.addWidget(self.tree_widget)
+
+        self.tree_widget.header().setSectionResizeMode(0, QtWidgets.QHeaderView.Interactive)
+
+        for item in self.folder_explorer.deleted_list:
+            path = list(item.keys())[0]
+            name = os.path.basename(path)
+            original_location = os.path.dirname(path)
+            is_folder = item['is_folder']
+
+            tree_item = QtWidgets.QTreeWidgetItem()
+            tree_item.setText(0, name)
+            tree_item.setText(1, original_location)
+            tree_item.setData(0, QtCore.Qt.UserRole, item)  # Lưu trữ đường dẫn đầy đủ
+
+            if is_folder:
+                icon_path = "icon/folder_icon.png"
+            else:
+                icon_path = "icon/file_icon.png"
+
+            icon = QtGui.QIcon(icon_path)
+            tree_item.setIcon(0, icon)
+
+            self.tree_widget.addTopLevelItem(tree_item)
+
+        self.tree_widget.header().setStretchLastSection(True)
+
+        self.resize(600, 400)
+        icon = QtGui.QIcon("icon/bin_icon.png")
+        self.setWindowIcon(icon)
+
+        self.tree_widget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.tree_widget.customContextMenuRequested.connect(self.show_context_menu)
+
+        self.tree_widget.setIndentation(0)
+
+    def show_context_menu(self, pos):
+        menu = QtWidgets.QMenu()
+        restore_action = menu.addAction("Restore")
+        delete_action = menu.addAction("Delete")
+
+        restore_action.triggered.connect(self.restore_item)  # Kết nối tới slot xử lý "Restore"
+        delete_action.triggered.connect(self.delete_item)
+
+        menu.exec_(self.tree_widget.mapToGlobal(pos))
+
+    def restore_item(self):
+        selected_item = self.tree_widget.currentItem()
+        if selected_item:
+            deleted_dict = selected_item.data(0, QtCore.Qt.UserRole)  # Lấy đường dẫn đã lưu
+            QtWidgets.QMessageBox.information(self, "Restore File", f"Restoring: {list(deleted_dict.keys())[0]}")
+            
+            self.vol.restore_folder_file(deleted_dict)
+            self.folder_explorer.deleted_list.remove(deleted_dict)
+            self.tree_widget.takeTopLevelItem(self.tree_widget.indexOfTopLevelItem(selected_item))
+
+    def delete_item(self):
+        selected_item = self.tree_widget.currentItem()
+        if selected_item:
+            deleted_dict = selected_item.data(0, QtCore.Qt.UserRole)  # Lấy đường dẫn đã lưu
+            QtWidgets.QMessageBox.information(self, "Delete File", f"Delete: {list(deleted_dict.keys())[0]}")
+
+            self.folder_explorer.deleted_list.remove(deleted_dict)
+            self.tree_widget.takeTopLevelItem(self.tree_widget.indexOfTopLevelItem(selected_item))
+
 
 class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
     # 0: nothing, 1: copy, 2: cut
@@ -135,7 +204,7 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         root_index = self.model.index(self.vol_name) 
         self.treeView.setRootIndex(root_index)
 
-        icon = QtGui.QIcon("icon/file_icon.png")
+        icon = QtGui.QIcon("icon/folder_icon.png")
         self.setWindowIcon(icon)
 
         # Interaction
@@ -153,8 +222,9 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         # Font for QTextEdit
         font = QtGui.QFont("Arial", 12)
         self.folder_att.setFont(font)
-
         self.setStyleSheet("QMainWindow { background-color: #CCCCCC; }")
+
+        self.deleted_list = []
 
     def populate(self):
         self.model = QtWidgets.QFileSystemModel()
@@ -168,8 +238,8 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
             self.vol = NTFS(self.vol_name)
 
     def show_recycle_bin(self):
-        recycle_bin_window = RecycleBinWindow()
-        recycle_bin_window.show()
+        self.recycle_bin_window = RecycleBinWindow(self)
+        self.recycle_bin_window.show()
 
     def show_folder_info(self):
         try:
@@ -280,11 +350,17 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
                 folder_path = self.model.filePath(index)
                 folder_path = folder_path.replace("/", "\\")
 
+                deleted_dict = {}
+                # folder
                 if check_path_type(folder_path) == 0:
-                    self.vol.delete_folder_file(folder_path, 0)
+                    self.vol.delete_folder_file(folder_path, 0, deleted_dict)
+                    deleted_dict.update({'is_folder': True})
+                # file or other
                 else:
-                    self.vol.delete_folder_file(folder_path, 1)
-                    
+                    self.vol.delete_folder_file(folder_path, 1, deleted_dict)
+                    deleted_dict.update({'is_folder': False})
+                self.deleted_list.append(deleted_dict)
+
                 self.reset_volume()
                 self.populate()
                 root_index = self.model.index(self.vol_name) 

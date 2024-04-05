@@ -170,7 +170,6 @@ class FAT:
                 break
         return index_list
 
-deleted_list = {}
 class FAT32:
     def __init__(self, name: str) -> None:
         # reset deleted list in file txt
@@ -379,14 +378,17 @@ class FAT32:
             return data
         except:
             return ''
-    def restore_folder_file(self, path: str, key):
-        for i in deleted_list:
-            if i == path:
-                # print(deleted_list[i])
-                subprocess.call(["delete.exe", self.name, 'RESTORE', 'FAT32', deleted_list[i]])
-                del deleted_list[i]
-                break
-    def delete_folder_file(self, path: str, key):
+
+    def restore_folder_file(self, deleted_dict):
+        # for i in deleted_list:
+        #     if i == path:
+        #         print(deleted_list[i])
+        #         subprocess.call(["delete.exe", self.name, 'RESTORE', 'FAT32', deleted_list[i]])
+        #         del deleted_list[i]
+        #         break
+        pass
+
+    def delete_folder_file(self, path: str, key, deleted_dict: dict):
         try:
             if key == 0:
                 if not os.path.isabs(path):
@@ -398,12 +400,12 @@ class FAT32:
                 cdet = self.visit_dir(get_parent_path(path))
                 file_name = os.path.basename(path)
                 record = cdet.find_entry(file_name)
+
             result = str(record.starting_offset) + ' ' + str(record.starting_byte) + ' '
             for i in record.subentry_in_this_entry:
                 result = result + str(i.starting_offset) + ' ' + str(i.starting_byte) + ' '
-            deleted_list[path] = result
-            print(deleted_list)
-            # thêm vào thùng rác xong mới xóa
+
+            deleted_dict[path] = result
 
             subprocess.call(["delete.exe", self.name, 'DEL', 'FAT32', str(record.starting_offset)])
         except Exception as e:
