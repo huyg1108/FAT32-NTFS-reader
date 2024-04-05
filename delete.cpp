@@ -64,33 +64,41 @@ void deleteNFTS(LPCWSTR folder_path, long long offset = 0, int entry_size = 512)
     CloseHandle(hWrite);
 }
 
-void deleteFAT32(LPCWSTR folder_path, long long offset = 0) {
+void deleteFAT32(LPCWSTR folder_path, long long offset) {
     DWORD read;
-    DWORD size = 32;
-    BYTE buffer[32];
-
+    DWORD size = 512;
+    BYTE buffer[512];
+    // Open file for reading
     HANDLE hRead = CreateFileW(folder_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-
     if (hRead == INVALID_HANDLE_VALUE) {
+        std::cerr << "1 Failed to open file for reading. Error code: " << GetLastError() << std::endl;
         return;
     }
     LARGE_INTEGER liRead;
+    liRead.QuadPart = offset/size * size;
+    
+    // std::cerr << "afsdjlk; Failed to set file pointer for reading. Error code: " << GetLastError() << std::endl;
 
-    liRead.QuadPart = offset;
-    if (!SetFilePointerEx(hRead, liRead, NULL, FILE_BEGIN)) {
+    // Set file pointer to the desired offset
+    if (SetFilePointerEx(hRead, liRead, NULL, FILE_BEGIN) == 0) {
+        // std::cerr << "2 Failed to set file pointer for reading. Error code: " << GetLastError() << std::endl;
         CloseHandle(hRead);
         return;
     }
 
-    if (!ReadFile(hRead, buffer, size, &read, NULL) || read != sizeof(buffer)) {
+    // Read data from file
+
+    if (!ReadFile(hRead, buffer, size, &read, NULL) || read != size) {
+        std::cerr << "3 Failed to read from file. Error code: " << GetLastError() << std::endl;
         CloseHandle(hRead);
         return;
     }
-    CloseHandle(hRead);
+    // cerr << "OMG???" << endl;
 
     HANDLE hWrite = CreateFileW(folder_path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
     if (hWrite == INVALID_HANDLE_VALUE) {
+        std::cerr << "Failed to open volume for writing. Error code: " << GetLastError() << std::endl;
         return;
     }
     DWORD bytesReturned;
@@ -98,23 +106,25 @@ void deleteFAT32(LPCWSTR folder_path, long long offset = 0) {
     // Dismount
     BOOL result = DeviceIoControl(hWrite, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &bytesReturned, NULL);
 
-    buffer[0x0] = 0xE5;
+    buffer[offset % size] = 0xE5;
 
     LARGE_INTEGER liWrite;
-
-    liWrite.QuadPart = offset;
+    
+    liWrite.QuadPart = offset/size * size;
     if (!SetFilePointerEx(hWrite, liWrite, 0, FILE_BEGIN)) {
+        std::cerr << "Failed to set file pointer for writing. Error code: " << GetLastError() << std::endl;
         CloseHandle(hWrite);
         return;
     }
 
     DWORD bytesWritten;
     if (!WriteFile(hWrite, buffer, size, &bytesWritten, NULL)) {
+        std::cerr << "Failed to write to volume. Error code: " << GetLastError() << std::endl;
         CloseHandle(hWrite);
         return;
     }
     
-    CloseHandle(hWrite);
+    // CloseHandle(hWrite);
 }
 
 long long convertToInt(const string& s) {
@@ -133,18 +143,14 @@ wstring convertToWideString(const char* str) {
     return wideStr;
 }
 
-// int main(int argc, char* argv[]) {
-//     wstring volume = L"\\\\.\\" + convertToWideString(argv[1]);
-//     if (strcmp(argv[3], "0") == 0) {
-//         deleteNFTS(volume.c_str(), convertToInt(argv[2]), stoi(argv[4]));
-//     }
-//     else if (strcmp(argv[3], "1") == 0) {
-//         deleteFAT32(volume.c_str(), convertToInt(argv[2]));
-//     }
-//     return 0;
-// }
-
 int main(int argc, char* argv[]) {
-    deleteFAT32(L"\\\\.\\E:", 12583712);
+    wstring volume = L"\\\\.\\" + convertToWideString(argv[1]);
+    if (strcmp(argv[3], "0") == 0) {
+        deleteNFTS(volume.c_str(), convertToInt(argv[2]), stoi(argv[4]));
+    }
+    else if (strcmp(argv[3], "1") == 0) {
+        for (int i = 2 ; i < argc ; i++)
+            deleteFAT32(volume.c_str(), convertToInt(argv[i]));
+    }
     return 0;
 }
