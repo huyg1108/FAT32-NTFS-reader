@@ -17,12 +17,13 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
+        MainWindow.setEnabled(True)
         MainWindow.resize(367, 253)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.label = QLabel(self.centralwidget)
         self.label.setObjectName(u"label")
-        self.label.setGeometry(QRect(90, 40, 195, 23))
+        self.label.setGeometry(QRect(50, 20, 281, 61))
         self.comboBox = QComboBox(self.centralwidget)
         self.comboBox.setObjectName(u"comboBox")
         self.comboBox.setGeometry(QRect(120, 80, 141, 31))
@@ -42,6 +43,6 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-size:14pt; font-weight:600;\">Choose your volume</span></p></body></html>", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:14pt; font-weight:600;\">Choose your volume</span></p></body></html>", None))
     # retranslateUi
 

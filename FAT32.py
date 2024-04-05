@@ -403,6 +403,8 @@ class FAT32:
                 result = result + str(i.starting_offset) + ' ' + str(i.starting_byte) + ' '
             deleted_list[path] = result
             print(deleted_list)
+            # thêm vào thùng rác xong mới xóa
+
             subprocess.call(["delete.exe", self.name, 'DEL', 'FAT32', str(record.starting_offset)])
         except Exception as e:
             raise (e)

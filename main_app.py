@@ -93,7 +93,7 @@ class BmpFileContentWindow(QtWidgets.QWidget):
         self.setWindowTitle(title)
         layout = QtWidgets.QVBoxLayout()
 
-        self.image_label = QLabel()
+        self.image_label = QtWidgets.QLabel()
 
         bmp = BMP(BitmapHeader(0, 0, 0), BitmapDIB(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), [])
         inputBitmapFile(image_path, bmp)
@@ -101,16 +101,25 @@ class BmpFileContentWindow(QtWidgets.QWidget):
 
         image = draw_image_from_pixels(pixel_array)
 
-        pixmap = QPixmap.fromImage(image)
+        pixmap = QtGui.QPixmap.fromImage(image)
 
         self.image_label.setPixmap(pixmap)
 
         layout.addWidget(self.image_label)
         self.setLayout(layout)
 
-        icon = QtGui.QIcon("icon/text_icon.png")
+        icon = QtGui.QIcon("icon/bmp_icon.png")
         self.setWindowIcon(icon)
 
+class RecycleBinWindow(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Recycle Bin")
+
+        layout = QtWidgets.QVBoxLayout()
+        self.setLayout(layout)
+
+        self.resize(400, 300)
 
 class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
     # 0: nothing, 1: copy, 2: cut
@@ -135,6 +144,7 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         self.treeView.doubleClicked.connect(self.show_txt_file_content)
         self.treeView.doubleClicked.connect(self.show_bitmap_image)
         self.disk_info.clicked.connect(self.show_drive_info)
+        self.recycleBin.clicked.connect(self.show_recycle_bin)
 
         # Context menu
         self.treeView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -156,6 +166,10 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
             self.vol = FAT32(self.vol_name)
         elif NTFS.is_ntfs(self.vol_name):
             self.vol = NTFS(self.vol_name)
+
+    def show_recycle_bin(self):
+        recycle_bin_window = RecycleBinWindow()
+        recycle_bin_window.show()
 
     def show_folder_info(self):
         try:

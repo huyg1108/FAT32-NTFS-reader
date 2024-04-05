@@ -161,6 +161,7 @@ wstring convertToWideString(const char *str)
     }
     return wideStr;
 }
+
 // NTFS DELETE : delete.exe <volume> DEL NTFS
 // NTFS RESTORE : delete.exe <volume> RESTORE NTFS
 // FAT32 DELETE : delete.exe <volume> DEL FAT32 <offset1>  <value1> <offset2> <value2> ...

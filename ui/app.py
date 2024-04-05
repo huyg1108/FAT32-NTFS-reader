@@ -17,7 +17,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(868, 612)
+        MainWindow.resize(878, 632)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.treeView = QTreeView(self.centralwidget)
@@ -29,17 +29,20 @@ class Ui_MainWindow(object):
         self.lineEdit = QLineEdit(self.centralwidget)
         self.lineEdit.setObjectName(u"lineEdit")
         self.lineEdit.setEnabled(True)
-        self.lineEdit.setGeometry(QRect(40, 10, 671, 21))
+        self.lineEdit.setGeometry(QRect(60, 10, 801, 21))
         self.disk_info = QPushButton(self.centralwidget)
         self.disk_info.setObjectName(u"disk_info")
-        self.disk_info.setGeometry(QRect(720, 10, 141, 21))
+        self.disk_info.setGeometry(QRect(660, 420, 161, 51))
         self.label = QLabel(self.centralwidget)
         self.label.setObjectName(u"label")
-        self.label.setGeometry(QRect(10, 10, 31, 16))
+        self.label.setGeometry(QRect(0, 10, 61, 21))
+        self.recycleBin = QPushButton(self.centralwidget)
+        self.recycleBin.setObjectName(u"recycleBin")
+        self.recycleBin.setGeometry(QRect(660, 490, 161, 51))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 868, 21))
+        self.menubar.setGeometry(QRect(0, 0, 878, 21))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -53,5 +56,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.disk_info.setText(QCoreApplication.translate("MainWindow", u"Get Volume Information", None))
-        self.label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-size:10pt;\">Path</span></p></body></html>", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:10pt;\">Path</span></p></body></html>", None))
+        self.recycleBin.setText(QCoreApplication.translate("MainWindow", u"Recycle Bin", None))
     # retranslateUi
+
