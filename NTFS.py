@@ -124,7 +124,6 @@ class MFTentry:
         self.file_name["name_length"] = name_length
         self.file_name["long_name"] = long_name
 
-
     # 0x80
     def get_data(self, start):
         self.data['resident'] = not bool(self.raw_data[start + 0x8])
@@ -132,14 +131,38 @@ class MFTentry:
             offset = int.from_bytes(self.raw_data[start + 0x14:start + 0x16], byteorder='little')
             self.data['size'] = int.from_bytes(self.raw_data[start + 0x10:start + 0x14], byteorder='little')
             self.data['content'] = self.raw_data[start + offset:start + offset + self.data['size']]
+        
         else:
-            cluster_chain = self.raw_data[start + 0x40]
-            offset = (cluster_chain & 0xF0) >> 4
-            size = cluster_chain & 0x0F
-
             self.data['size'] = int.from_bytes(self.raw_data[start + 0x30: start + 0x38], byteorder='little')
-            self.data['cluster_size'] = int.from_bytes(self.raw_data[start + 0x41: start + 0x41 + size], byteorder='little')
-            self.data['cluster_offset'] =  int.from_bytes(self.raw_data[start + 0x41 + size: start + 0x41 + size + offset], byteorder='little')
+            test = self.data['size']
+            offset = int.from_bytes(self.raw_data[start + 0x40: start + 0x41], byteorder='little')
+            #####
+            self.data['data_run'] = []
+            flag = 1
+            i = 0
+            while True:
+                if flag == 0:
+                    break
+                if i == 0:
+                    cluster_chain = self.raw_data[start + 0x40]
+                    offset = (cluster_chain & 0xF0) >> 4
+                    size = cluster_chain & 0x0F
+
+                    cluster_size = int.from_bytes(self.raw_data[start + 0x41: start + 0x41 + size], byteorder='little')
+                    cluster_offset =  int.from_bytes(self.raw_data[start + 0x41 + size: start + 0x41 + size + offset], byteorder='little')
+                    flag = int.from_bytes(self.raw_data[start + 0x41 + size + offset: start + 0x41 + size + offset + 0x1], byteorder='little')
+                    start += 0x41 + size + offset
+                else:
+                    cluster_chain = self.raw_data[start]
+                    offset = (cluster_chain & 0xF0) >> 4
+                    size = cluster_chain & 0x0F
+
+                    cluster_size = int.from_bytes(self.raw_data[start + 0x1: start + 0x1 + size], byteorder='little')
+                    cluster_offset += int.from_bytes(self.raw_data[start + 0x1 + size: start + 0x1 + size + offset], byteorder='little')
+                    flag = int.from_bytes(self.raw_data[start + 0x1 + size + offset: start + 0x1 + size + offset + 0x1], byteorder='little')
+                
+                i += 1
+                self.data['data_run'].append([cluster_size, cluster_offset])
 
 class DirTree:
     def __init__(self, nodes: 'list[MFTentry]') -> None:
@@ -360,12 +383,6 @@ class NTFS:
             obj["Attribute"] = entry.standard_info["flags"]
             obj["Bytes"] = entry.data['size']
 
-            print(self.mft_header_offset(entry))
-            if entry.data['resident']:
-                obj["Sector"] = self.mft_offset * self.sectors_per_cluster + entry.file_id
-            else:
-                obj["Sector"] = entry.data['cluster_offset'] * self.sectors_per_cluster
-
             return obj
         except Exception as e:
             raise (e)
@@ -375,6 +392,7 @@ class NTFS:
         if len(self.cwd) == 1:
             return self.cwd[0] + "\\"
         return "\\".join(self.cwd)
+
 
     # Read content of .txt
     def get_text_content(self, path: str) -> str:
@@ -404,22 +422,36 @@ class NTFS:
                 raise (e)
             return data
         else:
+            # 0: cluster_count, 1: cluster_offset
             data = ""
             size_left = entry.data['size']
-            offset = entry.data['cluster_offset'] * self.sectors_per_cluster * self.bytes_per_sector
-            cluster_num = entry.data['cluster_size']
-            self.fd.seek(offset)
-            for _ in range(cluster_num):
-                if size_left <= 0:
-                    break
-                raw_data = self.fd.read(min(self.sectors_per_cluster * self.bytes_per_sector, size_left))
-                size_left -= self.sectors_per_cluster * self.bytes_per_sector
-                try:
-                    data += raw_data.decode()
-                except UnicodeDecodeError as e:
-                    raise (e)
-                except Exception as e:
-                    raise (e)
+            offset = 0
+            cluster_num = 0
+            for data_run in entry.data['data_run']:
+                if cluster_num == 0:
+                    first_run_offset = data_run[1]
+                    offset = first_run_offset * self.sectors_per_cluster * self.bytes_per_sector
+                else:
+                    diff = data_run[1] - (first_run_offset)
+                    offset += diff * self.sectors_per_cluster * self.bytes_per_sector
+                
+                self.fd.seek(offset)
+
+                cluster_num = data_run[0]
+
+
+                for i in range(cluster_num):
+                    if size_left <= 0:
+                        break
+                    raw_data = self.fd.read(min(self.sectors_per_cluster * self.bytes_per_sector, size_left))
+                    size_left -= self.sectors_per_cluster * self.bytes_per_sector
+                    try:
+                        data += raw_data.decode()
+                    except UnicodeDecodeError as e:
+                        raise (e)
+                    except Exception as e:
+                        raise (e)
+        
             return data
 
     def delete_folder_file(self, path: str, key):
