@@ -465,7 +465,7 @@ class NTFS:
                 cur_dir = self.visit_dir(get_parent_path(path))
                 file_name = os.path.basename(path)
                 entry = cur_dir.find_entry(file_name)
-            subprocess.call(["delete.exe", self.name, str(self.mft_header_offset(entry)), "0", str(self.entry_size)])
+            subprocess.call(["delete.exe", "NTFS",self.name, str(self.mft_header_offset(entry)), str(self.entry_size)])
         except Exception as e:
             raise (e)
 
