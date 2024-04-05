@@ -136,33 +136,38 @@ class MFTentry:
             self.data['size'] = int.from_bytes(self.raw_data[start + 0x30: start + 0x38], byteorder='little')
             test = self.data['size']
             offset = int.from_bytes(self.raw_data[start + 0x40: start + 0x41], byteorder='little')
-            #####
+            
             self.data['data_run'] = []
             flag = 1
             i = 0
+
             while True:
                 if flag == 0:
                     break
+                
                 if i == 0:
                     cluster_chain = self.raw_data[start + 0x40]
                     offset = (cluster_chain & 0xF0) >> 4
                     size = cluster_chain & 0x0F
 
-                    cluster_size = int.from_bytes(self.raw_data[start + 0x41: start + 0x41 + size], byteorder='little')
-                    cluster_offset =  int.from_bytes(self.raw_data[start + 0x41 + size: start + 0x41 + size + offset], byteorder='little')
+                    cluster_count = int.from_bytes(self.raw_data[start + 0x41: start + 0x41 + size], byteorder='little')
+                    first_cluster =  int.from_bytes(self.raw_data[start + 0x41 + size: start + 0x41 + size + offset], byteorder='little')
+                    
                     flag = int.from_bytes(self.raw_data[start + 0x41 + size + offset: start + 0x41 + size + offset + 0x1], byteorder='little')
                     start += 0x41 + size + offset
+                
                 else:
                     cluster_chain = self.raw_data[start]
                     offset = (cluster_chain & 0xF0) >> 4
                     size = cluster_chain & 0x0F
 
-                    cluster_size = int.from_bytes(self.raw_data[start + 0x1: start + 0x1 + size], byteorder='little')
-                    cluster_offset += int.from_bytes(self.raw_data[start + 0x1 + size: start + 0x1 + size + offset], byteorder='little')
-                    flag = int.from_bytes(self.raw_data[start + 0x1 + size + offset: start + 0x1 + size + offset + 0x1], byteorder='little')
+                    cluster_count = int.from_bytes(self.raw_data[start + 0x1: start + 0x1 + size], byteorder='little')
+                    first_cluster += int.from_bytes(self.raw_data[start + 0x1 + size: start + 0x1 + size + offset], byteorder='little', signed = True)
+                    
+                    flag = int.from_bytes(self.raw_data[start + 0x1 + size + offset: start + 0x2 + size + offset], byteorder='little')
                 
                 i += 1
-                self.data['data_run'].append([cluster_size, cluster_offset])
+                self.data['data_run'].append([cluster_count, first_cluster])
 
 class DirTree:
     def __init__(self, nodes: 'list[MFTentry]') -> None:
@@ -422,11 +427,12 @@ class NTFS:
                 raise (e)
             return data
         else:
-            # 0: cluster_count, 1: cluster_offset
             data = ""
             size_left = entry.data['size']
             offset = 0
             cluster_num = 0
+            
+            # 0: cluster_count, 1: first_cluster
             for data_run in entry.data['data_run']:
                 if cluster_num == 0:
                     first_run_offset = data_run[1]
@@ -434,11 +440,10 @@ class NTFS:
                 else:
                     diff = data_run[1] - (first_run_offset)
                     offset += diff * self.sectors_per_cluster * self.bytes_per_sector
-                
+
                 self.fd.seek(offset)
 
                 cluster_num = data_run[0]
-
 
                 for i in range(cluster_num):
                     if size_left <= 0:
