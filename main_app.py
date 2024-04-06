@@ -137,7 +137,7 @@ class RecycleBinWindow(QtWidgets.QWidget):
             tree_item = QtWidgets.QTreeWidgetItem()
             tree_item.setText(0, name)
             tree_item.setText(1, original_location)
-            tree_item.setData(0, QtCore.Qt.UserRole, item)  # Lưu trữ đường dẫn đầy đủ
+            tree_item.setData(0, QtCore.Qt.UserRole, item)
 
             if is_folder:
                 icon_path = "icon/folder_icon.png"
@@ -173,10 +173,11 @@ class RecycleBinWindow(QtWidgets.QWidget):
     def restore_item(self):
         selected_item = self.tree_widget.currentItem()
         if selected_item:
-            deleted_dict = selected_item.data(0, QtCore.Qt.UserRole)  # Lấy đường dẫn đã lưu
-            QtWidgets.QMessageBox.information(self, "Restore File", f"Restoring: {list(deleted_dict.keys())[0]}")
+            deleted_dict = selected_item.data(0, QtCore.Qt.UserRole)
+            path = list(deleted_dict.keys())[0]
+            QtWidgets.QMessageBox.information(self, "Restore File", f"Restoring: {path}")
             
-            self.vol.restore_folder_file(deleted_dict)
+            self.vol.restore_folder_file(deleted_dict, path)
             self.folder_explorer.deleted_list.remove(deleted_dict)
             self.tree_widget.takeTopLevelItem(self.tree_widget.indexOfTopLevelItem(selected_item))
 

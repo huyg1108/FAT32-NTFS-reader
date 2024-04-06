@@ -458,14 +458,8 @@ class NTFS:
                         raise (e)
         
             return data
-    def restore_folder_file(self, deleted_dict):
-        # for i in deleted_list:
-        #     if i == path:
-        #         print(deleted_list[i])
-        #         # subprocess.call(["delete.exe", self.name, "RESTORE", "NTFS", deleted_list[i]])
-        #         del deleted_list[i]
-        #         break
-        pass
+    def restore_folder_file(self, deleted_dict: dict, path: str):
+        subprocess.call(["delete.exe", self.name, "RESTORE", "NTFS", deleted_dict[path], str(self.entry_size)])
 
     def delete_folder_file(self, path: str, key, deleted_dict: dict):
         try:
@@ -480,7 +474,7 @@ class NTFS:
                 entry = cur_dir.find_entry(file_name)
 
             deleted_dict[path] = str(self.mft_header_offset(entry))
-            # subprocess.call(["delete.exe", self.name, "DEL", "NTFS", str(self.mft_header_offset(entry)), str(self.entry_size)])
+            subprocess.call(["delete.exe", self.name, "DEL", "NTFS", str(self.mft_header_offset(entry)), str(self.entry_size)])
         except Exception as e:
             raise (e)
 

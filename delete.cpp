@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
     {
         if (strcmp(argv[3], "NTFS") == 0)
         {
-            deleteNFTS(volume.c_str(), convertToInt(argv[2]), stoi(argv[3]));
+            deleteNFTS(volume.c_str(), convertToInt(argv[4]), stoi(argv[5]));
         }
         else if (strcmp(argv[3], "FAT32") == 0)
         {
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
     {
         if (strcmp(argv[3], "NTFS") == 0)
         {
-            restoreNFTS(volume.c_str(), convertToInt(argv[2]), stoi(argv[3]));
+            restoreNFTS(volume.c_str(), convertToInt(argv[4]), stoi(argv[5]));
         }
         else if (strcmp(argv[3], "FAT32") == 0)
         {
