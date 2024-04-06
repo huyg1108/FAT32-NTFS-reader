@@ -156,7 +156,7 @@ void adjustByteFAT32(LPCWSTR folder_path, long long offset, long long value = 0x
     HANDLE hRead = CreateFileW(folder_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
     if (hRead == INVALID_HANDLE_VALUE)
     {
-        std::cerr << "1 Failed to open file for reading. Error code: " << GetLastError() << std::endl;
+        // std::cerr << "1 Failed to open file for reading. Error code: " << GetLastError() << std::endl;
         return;
     }
     LARGE_INTEGER liRead;
@@ -176,7 +176,7 @@ void adjustByteFAT32(LPCWSTR folder_path, long long offset, long long value = 0x
 
     if (!ReadFile(hRead, buffer, size, &read, NULL) || read != size)
     {
-        std::cerr << "3 Failed to read from file. Error code: " << GetLastError() << std::endl;
+        // std::cerr << "3 Failed to read from file. Error code: " << GetLastError() << std::endl;
         CloseHandle(hRead);
         return;
     }
@@ -185,7 +185,7 @@ void adjustByteFAT32(LPCWSTR folder_path, long long offset, long long value = 0x
 
     if (hWrite == INVALID_HANDLE_VALUE)
     {
-        std::cerr << "Failed to open volume for writing. Error code: " << GetLastError() << std::endl;
+        // std::cerr << "Failed to open volume for writing. Error code: " << GetLastError() << std::endl;
         return;
     }
     DWORD bytesReturned;
@@ -200,7 +200,7 @@ void adjustByteFAT32(LPCWSTR folder_path, long long offset, long long value = 0x
     liWrite.QuadPart = offset / size * size;
     if (!SetFilePointerEx(hWrite, liWrite, 0, FILE_BEGIN))
     {
-        std::cerr << "Failed to set file pointer for writing. Error code: " << GetLastError() << std::endl;
+        // std::cerr << "Failed to set file pointer for writing. Error code: " << GetLastError() << std::endl;
         CloseHandle(hWrite);
         return;
     }
@@ -208,7 +208,7 @@ void adjustByteFAT32(LPCWSTR folder_path, long long offset, long long value = 0x
     DWORD bytesWritten;
     if (!WriteFile(hWrite, buffer, size, &bytesWritten, NULL))
     {
-        std::cerr << "Failed to write to volume. Error code: " << GetLastError() << std::endl;
+        // std::cerr << "Failed to write to volume. Error code: " << GetLastError() << std::endl;
         CloseHandle(hWrite);
         return;
     }

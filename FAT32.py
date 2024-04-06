@@ -138,10 +138,10 @@ class RDET:
             for j in range(len(self.entries) - 2, -1, -1):
                 if (self.entries[j].is_subentry):
                     self.entries[-1].subentry_in_this_entry.append(self.entries[j])
-                    print(self.entries[j].name, self.entries[j].starting_offset)
+                    # print(self.entries[j].name, self.entries[j].starting_offset)
                 else:
                     break
-            print(self.entries[-1].long_name, self.entries[-1].starting_offset)
+            # print(self.entries[-1].long_name, self.entries[-1].starting_offset)
         
 
     def get_active_entries(self) -> 'list[RDETentry]':
@@ -324,7 +324,7 @@ class FAT32:
             obj["Name"] = record.long_name
             obj["Attribute"] = record.attr
 
-            print(record.starting_offset)
+            # print(record.starting_offset)
 
             if record.start_cluster == 0:
                 obj["Sector"] = (record.start_cluster + 2) * self.SC
