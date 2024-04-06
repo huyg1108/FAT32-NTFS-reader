@@ -138,6 +138,9 @@ class RDET:
             for j in range(len(self.entries) - 2, -1, -1):
                 if (self.entries[j].is_subentry):
                     self.entries[-1].subentry_in_this_entry.append(self.entries[j])
+                    print(self.entries[j].name, self.entries[j].starting_offset)
+                else:
+                    break
             print(self.entries[-1].long_name, self.entries[-1].starting_offset)
         
 
