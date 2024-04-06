@@ -224,19 +224,19 @@ class NTFS:
             exit()
 
         try:
-            self.boot_sector_raw = self.fd.read(0x200)
-            self.boot_sector = {}
-            self.read_boot_sector()
+            self.VBR_raw = self.fd.read(0x200)
+            self.VBR = {}
+            self.read_VBR()
 
-            if self.boot_sector["Type"] != b'NTFS    ':
+            if self.VBR["Type"] != b'NTFS    ':
                 raise Exception
 
-            self.boot_sector["Type"] = self.boot_sector["Type"].decode()
-            self.sectors_per_cluster = self.boot_sector["Sectors per cluster"]
-            self.bytes_per_sector = self.boot_sector["Bytes per sector"]
+            self.VBR["Type"] = self.VBR["Type"].decode()
+            self.sectors_per_cluster = self.VBR["Sectors per cluster"]
+            self.bytes_per_sector = self.VBR["Bytes per sector"]
 
-            self.entry_size = self.boot_sector["Bytes of one MFT"]
-            self.mft_offset = self.boot_sector["First cluster of MFT"]
+            self.entry_size = self.VBR["Bytes of one MFT"]
+            self.mft_offset = self.VBR["First cluster of MFT"]
 
             self.fd.seek(self.mft_offset * self.sectors_per_cluster * self.bytes_per_sector)
 
@@ -281,16 +281,16 @@ class NTFS:
         except Exception as e:
             exit()
 
-    def read_boot_sector(self):
-        self.boot_sector['Type'] = self.boot_sector_raw[3:0xB]
-        self.boot_sector['Bytes per sector'] = int.from_bytes(self.boot_sector_raw[0xB:0xD], byteorder = 'little')
-        self.boot_sector['Sectors per cluster'] = int.from_bytes(self.boot_sector_raw[0xD:0xE], byteorder = 'little')
-        self.boot_sector['Sectors per track'] = int.from_bytes(self.boot_sector_raw[0x18:0x1A], byteorder = 'little')
-        self.boot_sector['Number of heads'] = int.from_bytes(self.boot_sector_raw[0x1A:0x1C], byteorder = 'little')
-        self.boot_sector['Total sectors in volume'] = int.from_bytes(self.boot_sector_raw[0x28:0x30], byteorder = 'little')
-        self.boot_sector['First cluster of MFT'] = int.from_bytes(self.boot_sector_raw[0x30:0x38], byteorder = 'little')
-        self.boot_sector['First cluster of Mirror MFT'] = int.from_bytes(self.boot_sector_raw[0x38:0x40], byteorder = 'little')
-        self.boot_sector['Bytes of one MFT'] = 2 ** abs(int.from_bytes(self.boot_sector_raw[0x40:0x41], byteorder = 'little', signed=True))
+    def read_VBR(self):
+        self.VBR['Type'] = self.VBR_raw[3:0xB]
+        self.VBR['Bytes per sector'] = int.from_bytes(self.VBR_raw[0xB:0xD], byteorder = 'little')
+        self.VBR['Sectors per cluster'] = int.from_bytes(self.VBR_raw[0xD:0xE], byteorder = 'little')
+        self.VBR['Sectors per track'] = int.from_bytes(self.VBR_raw[0x18:0x1A], byteorder = 'little')
+        self.VBR['Number of heads'] = int.from_bytes(self.VBR_raw[0x1A:0x1C], byteorder = 'little')
+        self.VBR['Total sectors in volume'] = int.from_bytes(self.VBR_raw[0x28:0x30], byteorder = 'little')
+        self.VBR['First cluster of MFT'] = int.from_bytes(self.VBR_raw[0x30:0x38], byteorder = 'little')
+        self.VBR['First cluster of Mirror MFT'] = int.from_bytes(self.VBR_raw[0x38:0x40], byteorder = 'little')
+        self.VBR['Bytes of one MFT'] = 2 ** abs(int.from_bytes(self.VBR_raw[0x40:0x41], byteorder = 'little', signed=True))
 
     def get_path(self, path):
         dirs = re.sub(r"[/\\]+", r"\\", path).strip("\\").split("\\")
@@ -322,34 +322,6 @@ class NTFS:
             else:
                 raise Exception("Not a directory")
         return cur_dir
-
-    def get_all_entry(self, path = ""):
-        if path != "":
-            next_dir = self.visit_dir(path)
-            entry_list = next_dir.get_active_entries()
-        else:
-            entry_list = self.dir_tree.get_active_entries()
-        return entry_list
-
-    def get_items(self, path = ""):
-        items = []
-        entry_list = self.get_all_entry(path)
-        for entry in entry_list:
-            items.append(entry.file_name['long_name'])
-        return items
-
-    def get_dir(self, path = ""):
-        try:
-            entry_list = self.get_all_entry(path)
-            ret = []
-            for entry in entry_list:
-                obj = {}
-                obj["Flags"] = entry.standard_info['flags'].value
-                obj["Name"] = entry.file_name['long_name']
-                ret.append(obj)
-            return ret
-        except Exception as e:
-            raise (e)
 
     def change_dir(self, full_path=""):
         if full_path == "":
@@ -495,7 +467,7 @@ class NTFS:
     def __str__(self) -> str:
         s = "Volume name: " + self.name + "\n"
         for key in NTFS.main_components:
-            s += f"{key}: {self.boot_sector[key]}\n"
+            s += f"{key}: {self.VBR[key]}\n"
         return s
 
     def __del__(self):
