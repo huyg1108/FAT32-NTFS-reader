@@ -42,7 +42,7 @@
      <rect>
       <x>60</x>
       <y>10</y>
-      <width>801</width>
+      <width>711</width>
       <height>21</height>
      </rect>
     </property>
@@ -84,6 +84,19 @@
     </property>
     <property name="text">
      <string>Recycle Bin</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="refreshButton">
+    <property name="geometry">
+     <rect>
+      <x>780</x>
+      <y>10</y>
+      <width>71</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Refresh</string>
     </property>
    </widget>
   </widget>

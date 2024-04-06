@@ -29,7 +29,7 @@ class Ui_MainWindow(object):
         self.lineEdit = QLineEdit(self.centralwidget)
         self.lineEdit.setObjectName(u"lineEdit")
         self.lineEdit.setEnabled(True)
-        self.lineEdit.setGeometry(QRect(60, 10, 801, 21))
+        self.lineEdit.setGeometry(QRect(60, 10, 711, 21))
         self.disk_info = QPushButton(self.centralwidget)
         self.disk_info.setObjectName(u"disk_info")
         self.disk_info.setGeometry(QRect(660, 420, 161, 51))
@@ -39,6 +39,9 @@ class Ui_MainWindow(object):
         self.recycleBin = QPushButton(self.centralwidget)
         self.recycleBin.setObjectName(u"recycleBin")
         self.recycleBin.setGeometry(QRect(660, 490, 161, 51))
+        self.refreshButton = QPushButton(self.centralwidget)
+        self.refreshButton.setObjectName(u"refreshButton")
+        self.refreshButton.setGeometry(QRect(780, 10, 71, 23))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -58,5 +61,6 @@ class Ui_MainWindow(object):
         self.disk_info.setText(QCoreApplication.translate("MainWindow", u"Get Volume Information", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:10pt;\">Path</span></p></body></html>", None))
         self.recycleBin.setText(QCoreApplication.translate("MainWindow", u"Recycle Bin", None))
+        self.refreshButton.setText(QCoreApplication.translate("MainWindow", u"Refresh", None))
     # retranslateUi
 

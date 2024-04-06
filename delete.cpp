@@ -73,11 +73,11 @@ void deleteNFTS(LPCWSTR folder_path, long long offset = 0, int entry_size = 512)
     CloseHandle(hWrite);
 }
 
-void restoreNFTS(LPCWSTR folder_path, long long offset = 0, int entry_size = 512)
+void restoreNFTS(LPCWSTR folder_path, long long offset = 0, int entry_size = 1024)
 {
     DWORD read;
-    DWORD size = entry_size * 2;
-    BYTE buffer[entry_size * 2];
+    DWORD size = entry_size;
+    BYTE buffer[entry_size];
 
     HANDLE hRead = CreateFileW(folder_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
@@ -112,15 +112,17 @@ void restoreNFTS(LPCWSTR folder_path, long long offset = 0, int entry_size = 512
     // Dismount
     BOOL result = DeviceIoControl(hWrite, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &bytesReturned, NULL);
 
+    int flag = (int) buffer[0x16];
+    
     // File
-    if (buffer[0x16] == 0x0)
+    if (flag == 0)
     {
         buffer[0x16] = 0x1;
     }
     // Folder
-    else if (buffer[0x16] == 0x2)
+    else if (flag == 2)
     {
-        buffer[0x16] = 0x1;
+        buffer[0x16] = 0x3;
     }
 
     LARGE_INTEGER liWrite;

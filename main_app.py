@@ -8,7 +8,8 @@ from FAT32 import *
 from ui import app, disk
 import shutil
 from send2trash import send2trash
-from bmp import * 
+from bmp import *
+import subprocess
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -118,6 +119,7 @@ class RecycleBinWindow(QtWidgets.QWidget):
         self.setWindowTitle("Recycle Bin")
         self.folder_explorer = folder_explorer
         self.vol = folder_explorer.vol
+        self.vol_name = folder_explorer.vol_name
 
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
@@ -175,7 +177,7 @@ class RecycleBinWindow(QtWidgets.QWidget):
         if selected_item:
             deleted_dict = selected_item.data(0, QtCore.Qt.UserRole)
             path = list(deleted_dict.keys())[0]
-            QtWidgets.QMessageBox.information(self, "Restore File", f"Restoring: {path}")
+            QtWidgets.QMessageBox.information(self, "Restore File", f"Restoring: {os.path.basename(path)}")
             
             self.vol.restore_folder_file(deleted_dict, path)
             self.folder_explorer.deleted_list.remove(deleted_dict)
@@ -185,7 +187,7 @@ class RecycleBinWindow(QtWidgets.QWidget):
         selected_item = self.tree_widget.currentItem()
         if selected_item:
             deleted_dict = selected_item.data(0, QtCore.Qt.UserRole)  # Lấy đường dẫn đã lưu
-            QtWidgets.QMessageBox.information(self, "Delete File", f"Delete: {list(deleted_dict.keys())[0]}")
+            QtWidgets.QMessageBox.information(self, "Delete File", f"Delete: {os.path.basename(list(deleted_dict.keys())[0])}")
 
             self.folder_explorer.deleted_list.remove(deleted_dict)
             self.tree_widget.takeTopLevelItem(self.tree_widget.indexOfTopLevelItem(selected_item))
@@ -215,6 +217,7 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         self.treeView.doubleClicked.connect(self.show_bitmap_image)
         self.disk_info.clicked.connect(self.show_drive_info)
         self.recycleBin.clicked.connect(self.show_recycle_bin)
+        self.refreshButton.clicked.connect(self.refresh_action)
 
         # Context menu
         self.treeView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -237,6 +240,10 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
             self.vol = FAT32(self.vol_name)
         elif NTFS.is_ntfs(self.vol_name):
             self.vol = NTFS(self.vol_name)
+
+        self.populate()
+        root_index = self.model.index(self.vol_name) 
+        self.treeView.setRootIndex(root_index)
 
     def show_recycle_bin(self):
         self.recycle_bin_window = RecycleBinWindow(self)
@@ -363,9 +370,6 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
                 self.deleted_list.append(deleted_dict)
 
                 self.reset_volume()
-                self.populate()
-                root_index = self.model.index(self.vol_name) 
-                self.treeView.setRootIndex(root_index)
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
         # Copy
@@ -433,7 +437,20 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
                     self.reset_volume()
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
+
+    def refresh_action(self):
+        try:
+            result = subprocess.run(['chkdsk', str(self.vol_name), '/f'], creationflags=subprocess.CREATE_NO_WINDOW, capture_output=True, text=True, check=True)
+            print("Output của chkdsk:", result.stdout)
             
+        except subprocess.CalledProcessError as e:
+            print("Lỗi khi chạy chkdsk:", e)
+            print("Chi tiết lỗi:", e.stderr)
+        except Exception as e:
+            print("Lỗi:", e)
+
+        self.reset_volume()
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
