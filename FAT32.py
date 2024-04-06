@@ -380,14 +380,10 @@ class FAT32:
             return ''
 
     def restore_folder_file(self, deleted_dict: dict, path: str):
-        # for i in deleted_list:
-        #     if i == path:
-        #         print(deleted_list[i])
-        #         subprocess.call(["delete.exe", self.name, 'RESTORE', 'FAT32', deleted_list[i]])
-        #         del deleted_list[i]
-        #         break
-        
-        pass
+        try:
+            subprocess.call(["delete.exe", self.name, 'RESTORE', 'FAT32', deleted_dict[path]])
+        except Exception as e:
+            raise (e)
 
     def delete_folder_file(self, path: str, key, deleted_dict: dict):
         try:

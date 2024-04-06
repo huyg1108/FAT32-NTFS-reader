@@ -2,6 +2,8 @@
 #include <Winioctl.h>
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <vector>
 using namespace std;
 
 void deleteNFTS(LPCWSTR folder_path, long long offset = 0, int entry_size = 512)
@@ -210,8 +212,7 @@ void adjustByteFAT32(LPCWSTR folder_path, long long offset, long long value = 0x
         CloseHandle(hWrite);
         return;
     }
-
-    // CloseHandle(hWrite);
+    CloseHandle(hWrite);
 }
 
 long long convertToInt(const string &s)
@@ -232,6 +233,22 @@ wstring convertToWideString(const char *str)
         }
     }
     return wideStr;
+}
+// slipt the command line arguments
+vector<pair<int,int>> splitArgs(char* s)
+{
+    vector<pair<int,int>> res;
+    string str = s;
+    stringstream ss(str);
+    string token;
+    while (getline(ss, token, ' '))
+    {
+        int offset = stoi(token);
+        getline(ss, token, ' ');
+        int value = stoi(token);
+        res.push_back({offset, value});
+    }
+    return res;
 }
 
 // NTFS DELETE : delete.exe <volume> DEL NTFS
@@ -262,8 +279,11 @@ int main(int argc, char *argv[])
         }
         else if (strcmp(argv[3], "FAT32") == 0)
         {
-            for (int i = 4; i < argc; i += 2)
-                adjustByteFAT32(volume.c_str(), convertToInt(argv[i]), convertToInt(argv[i + 1]));
+            vector<pair<int,int>> args = splitArgs(argv[4]);
+            for (auto arg : args)
+            {
+                adjustByteFAT32(volume.c_str(), arg.first, arg.second);
+            }
         }
     }
     return 0;
