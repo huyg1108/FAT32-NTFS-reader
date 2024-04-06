@@ -182,6 +182,7 @@ class RecycleBinWindow(QtWidgets.QWidget):
             self.vol.restore_folder_file(deleted_dict, path)
             self.folder_explorer.deleted_list.remove(deleted_dict)
             self.tree_widget.takeTopLevelItem(self.tree_widget.indexOfTopLevelItem(selected_item))
+            self.folder_explorer.reset_volume()
 
     def delete_item(self):
         selected_item = self.tree_widget.currentItem()
@@ -217,7 +218,6 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
         self.treeView.doubleClicked.connect(self.show_bitmap_image)
         self.disk_info.clicked.connect(self.show_drive_info)
         self.recycleBin.clicked.connect(self.show_recycle_bin)
-        self.refreshButton.clicked.connect(self.refresh_action)
 
         # Context menu
         self.treeView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -437,19 +437,6 @@ class FolderExplorer(app.Ui_MainWindow, QtWidgets.QMainWindow):
                     self.reset_volume()
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
-
-    def refresh_action(self):
-        try:
-            result = subprocess.run(['chkdsk', str(self.vol_name), '/f'], creationflags=subprocess.CREATE_NO_WINDOW, capture_output=True, text=True, check=True)
-            print("Output của chkdsk:", result.stdout)
-            
-        except subprocess.CalledProcessError as e:
-            print("Lỗi khi chạy chkdsk:", e)
-            print("Chi tiết lỗi:", e.stderr)
-        except Exception as e:
-            print("Lỗi:", e)
-
-        self.reset_volume()
 
 
 if __name__ == "__main__":
