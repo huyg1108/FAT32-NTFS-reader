@@ -7,3 +7,4 @@ This project is a file system reader that allows you to read data from FAT32 and
 * Read txt file
 * Delete/restore file/folder
 * Copy/Cut/Paste file/folder
+* Open bmp image file
